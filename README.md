@@ -16,11 +16,14 @@ pip install -r requirements.txt
 
 ## Usage
 ```
-python server.py
+python AccessibilityAPIServer.py [port-number]
 ```
 
 ## API Reference
 ### Accessible Object
+
+Retrieve accesible object information
+
 - URL:
 
   /accessible
@@ -44,6 +47,9 @@ python server.py
   depth=[integer]
   
 ### Event
+
+Track event on accessible
+
 - URL:
 
   /event
@@ -67,6 +73,9 @@ python server.py
   role=[integer]
   
 ### Command
+
+Run command on accessible object
+
 - URL:
 
   /cmd
@@ -92,6 +101,7 @@ python server.py
   role=[integer]
  
 ## Tests
+
 ```
 python test_IAccessible.py
 ```

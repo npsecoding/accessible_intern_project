@@ -1,7 +1,9 @@
 """ Service requests for accessible objects """
 
+from sys import platform
+from argparse import ArgumentParser
 from BaseHTTPServer import BaseHTTPRequestHandler
-import re
+from re import search
 from urlparse import urlsplit, parse_qsl
 from json import dumps
 from SocketServer import TCPServer
@@ -35,7 +37,7 @@ class AccessibleRequestHandler(BaseHTTPRequestHandler):
         return identifiers
 
     def do_GET(self):
-        if re.search('/accessible', self.path) != None:
+        if search('/accessible', self.path) != None:
             params = dict(parse_qsl(urlsplit(self.path).query))
 
             _interface = params.get('interface')
@@ -49,7 +51,7 @@ class AccessibleRequestHandler(BaseHTTPRequestHandler):
             else:
                 self._bad_response('Bad Request: Accessible does not exist')
 
-        elif re.search('/event', self.path) != None:
+        elif search('/event', self.path) != None:
             params = dict(parse_qsl(urlsplit(self.path).query))
             _interface = params.get('interface')
             _identifiers = self._set_identifiers(params)
@@ -67,7 +69,7 @@ class AccessibleRequestHandler(BaseHTTPRequestHandler):
             else:
                 self._bad_response('Bad Request: No event occurred')
 
-        elif re.search('/cmd', self.path) != None:
+        elif search('/cmd', self.path) != None:
             params = {}
             params['param'] = []
             for pair in parse_qsl(urlsplit(self.path).query):
@@ -100,20 +102,39 @@ class AccessibleRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
         return
 
-class AccessibleService:
+class AccessibilityAPIServer:
     def __init__(self, ip, port):
-        CoInitialize()
+        self.initialize()
         handler = AccessibleRequestHandler
         self.server = TCPServer((ip, port), handler)
         print '.............SERVICE RUNNING...............'
+
+    def initialize(self):
+        init_func = {
+            'win32': CoInitialize
+        }
+
+        init_func.get(platform)()
+
+    def shutdown(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def start(self):
         self.server.serve_forever()
 
 if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument("port", help="Port Number", type=int)
+    args = parser.parse_args()
+
     print '.............SETTING UP SERVICE............'
-    SERVER = AccessibleService("", 5000)
+    SERVER = AccessibilityAPIServer("", args.port)
+    SERVER.start()
 
     try:
         while True:
             pass
     except KeyboardInterrupt:
         print '.............SERVICE STOPPED...........'
+        SERVER.shutdown()

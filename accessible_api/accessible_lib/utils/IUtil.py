@@ -1,5 +1,6 @@
 """Interface for Platform Utilities"""
 
+
 class IUtil(object):
     """Utility Inteface Definition"""
     def __init__(self):

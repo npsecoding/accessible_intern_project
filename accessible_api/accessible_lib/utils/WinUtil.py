@@ -7,6 +7,7 @@ from ..scripts.constants import *
 from ..scripts.debug import *
 from ..utils.IUtil import IUtil
 
+
 class WinUtil(IUtil):
     """
     Utility definition for Windows Platform
@@ -54,8 +55,10 @@ class WinUtil(IUtil):
         pc_obtained = c_long()
         variant_array_type = VARIANT * cc_children
         rgvar_children = variant_array_type()
-        res = oledll.oleacc.AccessibleChildren(
-            accptr, ichild_start, cc_children, byref(rgvar_children), byref(pc_obtained))
+        res = oledll.oleacc.AccessibleChildren(accptr, ichild_start,
+                                               cc_children,
+                                               byref(rgvar_children),
+                                               byref(pc_obtained))
 
         if res == S_OK:
             acc_objs = []
@@ -130,16 +133,23 @@ class WinUtil(IUtil):
                 self._traverse(child, visited, search_criteria)
 
     def _get_test_window(self):
-         # Get the window for browser
+        # Get the window for browser
         test_class = c_char_p("MozillaWindowClass")
         current_hwnd = windll.user32.FindWindowA(test_class, None)
-        name = self._accessible_object_from_window(current_hwnd).accName(CHILDID_SELF)
-
+        name = (
+            self._accessible_object_from_window(current_hwnd)
+            .accName(CHILDID_SELF)
+        )
         # Iterate through windows
         while name is None or 'Marionette Accessible' not in name:
-            current_hwnd = windll.user32.FindWindowExA(None, current_hwnd, test_class, None)
-            name = self._accessible_object_from_window(current_hwnd).accName(CHILDID_SELF)
-
+            current_hwnd = (
+                windll.user32
+                .FindWindowExA(None, current_hwnd, test_class, None)
+            )
+            name = (
+                self._accessible_object_from_window(current_hwnd)
+                .accName(CHILDID_SELF)
+            )
         return current_hwnd
 
     def get_root_accessible(self):
@@ -147,7 +157,7 @@ class WinUtil(IUtil):
         Set root accessible object to test window
         """
         test_window = self._get_test_window()
-        print 'Test Window: %d' %test_window
+        print 'Test Window: %d' % test_window
         self._root = self._accessible_object_from_window(test_window)
         return self._root
 

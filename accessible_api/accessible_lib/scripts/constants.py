@@ -23,7 +23,7 @@ IID_IAccessible = IAccessible._iid_
 IAccessible2_t = IAccessible2
 IID_IAccessible2 = IAccessible2._iid_
 
-#TODO
+# TODO
 IATK_t = None
 IATSPI_t = None
 

@@ -2,6 +2,7 @@
 
 from .NsIAccessible import NsIAccessible
 
+
 class IAccessible2(NsIAccessible):
     """IA2 windows protocol"""
     def __init__(self, identifiers):
@@ -13,3 +14,4 @@ class IAccessible2(NsIAccessible):
 
     def serialize(self, child_depth=-1):
         """Convert pointer to object for serialization"""
+        # TODO

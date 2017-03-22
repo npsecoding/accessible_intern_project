@@ -2,6 +2,7 @@
 
 from .accessible import accessible, interface_ptr_types
 
+
 def execute_command(interface_t, identifiers, cmd, params):
     """Execute command on accessible object and returns value"""
     value = None

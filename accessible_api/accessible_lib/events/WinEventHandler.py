@@ -10,13 +10,14 @@ from ..scripts.debug import DEBUG_ENABLED
 
 INVALID_EVENT = -1
 
+
 class WinEventHandler(IEventHandler):
     """Handle Windows Events"""
     # Store information about event used between callback and handler
     info = {}
     event_found = None
 
-    # Helper function to find matching accessible from EVENT_CONSOLE_START_APPLICATION
+    # Helper function to find matching accessible
     @staticmethod
     def _match_criteria(acc_ptr, search_criteria, child_id=CHILDID_SELF):
         for criteria in search_criteria:
@@ -35,7 +36,8 @@ class WinEventHandler(IEventHandler):
 
     # Callback function
     @staticmethod
-    def accessible_from_event(hWinEventHook, event, hwnd, idObject, idChild, dwEventThread, dwmsEventTime):
+    def accessible_from_event(hWinEventHook, event, hwnd, idObject,
+                              idChild, dwEventThread, dwmsEventTime):
         acc_ptr = POINTER(IAccessible_t)()
         var_child = VARIANT()
         result = oledll.oleacc.AccessibleObjectFromEvent(
@@ -50,8 +52,8 @@ class WinEventHandler(IEventHandler):
         if WinEventHandler._match_criteria(acc_ptr, _identifiers, idChild):
             _interface = WinEventHandler.info['INTERFACE']
             WinEventHandler.event_found = {
-                'Child_Id' : idChild,
-                _interface : accessible(_interface, _identifiers).serialize(0)
+                'Child_Id': idChild,
+                _interface: accessible(_interface, _identifiers).serialize(0)
             }
 
     # Callback type

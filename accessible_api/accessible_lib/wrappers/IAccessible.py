@@ -5,6 +5,7 @@ from .NsIAccessible import NsIAccessible
 from ..scripts.constants import CHILDID_SELF, FULL_CHILD_TREE
 from ..scripts.debug import DEBUG_ENABLED
 
+
 class IAccessible(NsIAccessible):
     """IAccessible windows interface"""
     def __init__(self, identifiers):
@@ -28,18 +29,23 @@ class IAccessible(NsIAccessible):
             child_depth = int(child_depth)
 
         child_tree = {'Children': None}
+        parent_attrib = getattr(self._target, 'accParent')
+        role_attrib = getattr(self._target, 'accRole')
+        state_attrib = getattr(self._target, 'accState')
         attributes = [
-            'accChildCount', 'accChildren', 'accDefaultAction', 'accDescription',
-            'accFocus', 'accHelp', 'accHelpTopic', 'accKeyboardShortcut', 'accLocation',
-            'accName', 'accParent', 'accRole', 'accSelection', 'accState', 'accValue']
+            'accChildCount', 'accChildren', 'accDefaultAction',
+            'accDescription', 'accFocus', 'accHelp', 'accHelpTopic',
+            'accKeyboardShortcut', 'accLocation', 'accName', 'accParent',
+            'accRole', 'accSelection', 'accState', 'accValue']
         not_callable = ['accChildCount', 'accSelection']
         custom_callable = {
-            'accChildren': self.get_acc_children(self._target, child_tree, child_depth, True),
-            'accParent': self.semantic_wrap(getattr(self._target, 'accParent')),
-            'accFocus' : self.get_acc_focus(self._target)
+            'accChildren': self.get_acc_children(self._target, child_tree,
+                                                 child_depth, True),
+            'accParent': self.semantic_wrap(parent_attrib),
+            'accFocus': self.get_acc_focus(self._target)
             # Localized role and state
-            # 'accRole': localized_role(getattr(self._target, 'accRole')(CHILDID_SELF)),
-            # 'accState': localized_state(getattr(self._target, 'accState')(CHILDID_SELF))
+            # 'accRole': localized_role(role_attrib(CHILDID_SELF)),
+            # 'accState': localized_state(state_attrib(CHILDID_SELF))
         }
         node = self._target
 
@@ -47,9 +53,11 @@ class IAccessible(NsIAccessible):
         if node.isSimpleElement:
             attributes.remove('accChildren')
             del custom_callable['accChildren']
-            return self.parsed_json(node, attributes, custom_callable, not_callable, node.childId)
+            return self.parsed_json(node, attributes, custom_callable,
+                                    not_callable, node.childId)
 
-        return self.parsed_json(node, attributes, custom_callable, not_callable)
+        return self.parsed_json(node, attributes,
+                                custom_callable, not_callable)
 
     def semantic_wrap(self, acc_ptr, child_id=CHILDID_SELF):
         "Wrap children and parent pointers exposing semantics"
@@ -60,17 +68,22 @@ class IAccessible(NsIAccessible):
         if acc_ptr is None:
             return None
 
-        attributes = ['accName', 'accChildCount', 'accRole', 'accState', 'accValue']
+        role_attrib = getattr(self._target, 'accRole')
+        state_attrib = getattr(self._target, 'accState')
+        attributes = ['accName', 'accChildCount', 'accRole',
+                      'accState', 'accValue']
         not_callable = ['accChildCount', 'accSelection']
         custom_callable = {
             # Localized role and state
-            # 'accRole': localized_role(getattr(acc_ptr, 'accRole')(child_id)),
-            # 'accState': localized_state(getattr(acc_ptr, 'accState')(child_id))
+            # 'accRole': localized_role(role_attrib(child_id)),
+            # 'accState': localized_state(state_attrib(child_id))
         }
 
-        return self.parsed_json(acc_ptr, attributes, custom_callable, not_callable, child_id)
+        return self.parsed_json(acc_ptr, attributes, custom_callable,
+                                not_callable, child_id)
 
-    def parsed_json(self, acc_ptr, attribs, custom_callable, not_callable, child_id=CHILDID_SELF):
+    def parsed_json(self, acc_ptr, attribs, custom_callable,
+                    not_callable, child_id=CHILDID_SELF):
         "Does parsing of fields and determines call type for value"
         json = {}
         prefix = "acc"
@@ -139,11 +152,14 @@ class IAccessible(NsIAccessible):
 
         for index, child_ptr in enumerate(children_ptr):
             if first:
-                self.get_acc_children(child_ptr, tree[index], child_depth, False)
+                self.get_acc_children(child_ptr, tree[index],
+                                      child_depth, False)
             else:
-                self.get_acc_children(child_ptr, tree['Children'][index], child_depth, False)
+                self.get_acc_children(child_ptr, tree['Children'][index],
+                                      child_depth, False)
 
         return tree
+
 
 def localized_role(dw_role):
     """Get localized role from role constant"""
@@ -151,6 +167,7 @@ def localized_role(dw_role):
     lpsz_role = create_string_buffer(cch_role_max)
     oledll.oleacc.GetRoleTextA(dw_role, lpsz_role, cch_role_max)
     return lpsz_role.value
+
 
 def localized_state(dw_state):
     """Get localized state from state constant"""
@@ -161,6 +178,7 @@ def localized_state(dw_state):
         if state_bit & dw_state:
             states.append(_get_state_text(state_bit & dw_state))
     return states
+
 
 def _get_state_text(state_bit):
     cch_role_max = 100

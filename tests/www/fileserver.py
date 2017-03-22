@@ -1,26 +1,22 @@
 """Serve HTML Test Files"""
 
 import os
-import SimpleHTTPServer
-import SocketServer
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+from SocketServer import TCPServer
 from threading import Thread
 
-DEBUG = False
 
 class FileServer(object):
-    def __init__(self):
-        self.port = 8000
-        directory = 'www'
-
-        if DEBUG:
-            directory = "tests/www"
-
-        path = os.path.join(os.getcwd(), directory)
+    def __init__(self, port):
+        directory = '/www'
+        path = os.path.dirname(__file__)
         os.chdir(path)
 
-        handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-        httpd = SocketServer.TCPServer(("", self.port), handler)
+        handler = SimpleHTTPRequestHandler
+        self.server = TCPServer(("", port), handler)
+        self.thread = None
 
-        thread = Thread(target=httpd.serve_forever)
-        thread.daemon = True
-        thread.start()
+    def start(self):
+        self.thread = Thread(target=self.server.serve_forever)
+        self.thread.daemon = True
+        self.thread.start()

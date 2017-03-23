@@ -10,19 +10,23 @@ API that wraps around platform accessibility APIs, can be used to retrieve infor
 - ATK (Not Supported)
 
 ## Installation
+Install accssible library dependencies.
+
 ```
 pip install -r requirements.txt
 ```
 
 ## Usage
+Launch Accessible API service.
+
 ```
-python AccessibilityAPIServer.py [port-number]
+python AccessibilityAPIServer.py [port number] [platform]
 ```
 
 ## API Reference
 ### Accessible Object
 
-Retrieve accesible object information
+Retrieve accesible object information.
 
 - URL:
 
@@ -48,7 +52,7 @@ Retrieve accesible object information
   
 ### Event
 
-Track event on accessible
+Track event on accessible.
 
 - URL:
 
@@ -74,7 +78,7 @@ Track event on accessible
   
 ### Command
 
-Run command on accessible object
+Run command on accessible object.
 
 - URL:
 
@@ -100,7 +104,20 @@ Run command on accessible object
   
   role=[integer]
  
-## Tests
+## Platform Tests
+
+### Summary
+Marionette will drive the Gecko Web Engine in Firefox.
+
+### Setup
+Install Mozilla's automation engine, check out the docs here: [Marionette Docs](http://marionette-client.readthedocs.io/en/master/index.html)
+
+```
+pip install marionette_driver
+```
+
+### Example
+Simple test that gets an accessible checkbox object, listens for the check event on the checkbox and compares resulting state.
 
 ```
 python test_IAccessible.py

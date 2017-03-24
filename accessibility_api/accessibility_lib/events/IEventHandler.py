@@ -1,4 +1,8 @@
-"""Interface for EventHandler Object"""
+'''
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/.
+'''
 
 
 class IEventHandler(object):
@@ -9,7 +13,7 @@ class IEventHandler(object):
             'IDENTIFIERS': identifiers
         }
 
-    def register_event_hook(self):
+    def register_event_hook(self, event):
         """Track specific event"""
         raise NotImplementedError
 

@@ -1,4 +1,8 @@
-"""Accessibility Constants"""
+'''
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/.
+'''
 
 from comtypes import IServiceProvider
 from comtypes.gen.Accessibility import IAccessible
@@ -22,10 +26,6 @@ IID_IAccessible = IAccessible._iid_
 
 IAccessible2_t = IAccessible2
 IID_IAccessible2 = IAccessible2._iid_
-
-# TODO
-IATK_t = None
-IATSPI_t = None
 
 OBJID_WINDOW = 0x00000000
 OBJID_SELF = 0x00000000

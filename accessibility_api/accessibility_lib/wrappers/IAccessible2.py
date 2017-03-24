@@ -1,9 +1,15 @@
-"""IAccessible2"""
+'''
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/.
+'''
 
-from .NsIAccessible import NsIAccessible
+from accessibility_api.accessibility_lib.wrappers.BaseIAccessible import (
+    BaseIAccessible
+)
 
 
-class IAccessible2(NsIAccessible):
+class IAccessible2(BaseIAccessible):
     """IA2 windows protocol"""
     def __init__(self, identifiers):
         super(IAccessible2, self).__init__()

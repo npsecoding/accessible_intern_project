@@ -1,12 +1,18 @@
-"""IAccessible"""
+'''
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/.
+'''
 
 from ctypes import oledll, create_string_buffer
-from .NsIAccessible import NsIAccessible
+from accessibility_api.accessibility_lib.wrappers.BaseIAccessible import (
+    BaseIAccessible
+)
 from ..scripts.constants import CHILDID_SELF, FULL_CHILD_TREE
 from ..scripts.debug import DEBUG_ENABLED
 
 
-class IAccessible(NsIAccessible):
+class IAccessible(BaseIAccessible):
     """IAccessible windows interface"""
     def __init__(self, identifiers):
         super(IAccessible, self).__init__()

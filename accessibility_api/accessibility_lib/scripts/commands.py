@@ -1,6 +1,12 @@
-""" Issue commands to accessible"""
+'''
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/.
+'''
 
-from .accessible import accessible, interface_ptr_types
+from accessibility_api.accessibility_lib.scripts.accessible import (
+    accessible, interface_ptr_types
+)
 
 
 def execute_command(interface_t, identifiers, cmd, params):

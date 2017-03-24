@@ -1,11 +1,15 @@
-"""Utility for Windows Platform"""
+'''
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/.
+'''
 
 from ctypes import windll, oledll, byref, POINTER
 from ctypes.wintypes import c_char_p, c_long
 from comtypes.automation import VARIANT
-from ..scripts.constants import *
-from ..scripts.debug import *
-from ..utils.IUtil import IUtil
+from accessibility_api.accessibility_lib.scripts.constants import *
+from accessibility_api.accessibility_lib.scripts.debug import *
+from accessibility_api.accessibility_lib.utils.IUtil import IUtil
 
 
 class WinUtil(IUtil):
@@ -27,7 +31,7 @@ class WinUtil(IUtil):
 
         if p_service is not None:
             ia2_ptr = POINTER(IAccessible2_t)()
-            ia2_ptr = p_service.QueryService(IID_IAccessible, IAccessible2_t)
+            ia2_ptr = p_service.QueryService(IID_IAccessible2, IAccessible2_t)
 
             if ia2_ptr is not None:
                 print 'Accessible object implements IA2'

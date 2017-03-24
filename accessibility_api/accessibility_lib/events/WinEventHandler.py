@@ -1,12 +1,21 @@
-"Represent WINEVENTS"
+'''
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this file,
+You can obtain one at http://mozilla.org/MPL/2.0/.
+'''
 
 from ctypes import byref, wintypes, windll, oledll, POINTER, WINFUNCTYPE
 from comtypes.client import PumpEvents
 from comtypes.automation import VARIANT
-from ..scripts.accessible import accessible
-from ..events.IEventHandler import IEventHandler
-from ..scripts.constants import *
-from ..scripts.debug import DEBUG_ENABLED
+from accessibility_api.accessibility_lib.scripts.accessible import accessible
+from accessibility_api.accessibility_lib.events.IEventHandler import (
+    IEventHandler
+)
+from accessibility_api.accessibility_lib.scripts.constants import (
+    IAccessible_t, S_OK, CHILDID_SELF,
+    TIMEOUT, WIN_EVENT_NAMES, WINEVENT_OUTOFCONTEXT
+)
+from accessibility_api.accessibility_lib.scripts.debug import DEBUG_ENABLED
 
 INVALID_EVENT = -1
 
@@ -15,7 +24,7 @@ class WinEventHandler(IEventHandler):
     """Handle Windows Events"""
     # Store information about event used between callback and handler
     info = {}
-    event_found = None
+    found = None
 
     # Helper function to find matching accessible
     @staticmethod
@@ -38,6 +47,7 @@ class WinEventHandler(IEventHandler):
     @staticmethod
     def accessible_from_event(hWinEventHook, event, hwnd, idObject,
                               idChild, dwEventThread, dwmsEventTime):
+        '''Get accessible object from event'''
         acc_ptr = POINTER(IAccessible_t)()
         var_child = VARIANT()
         result = oledll.oleacc.AccessibleObjectFromEvent(
@@ -51,7 +61,7 @@ class WinEventHandler(IEventHandler):
         _identifiers = WinEventHandler.info['IDENTIFIERS']
         if WinEventHandler._match_criteria(acc_ptr, _identifiers, idChild):
             _interface = WinEventHandler.info['INTERFACE']
-            WinEventHandler.event_found = {
+            WinEventHandler.found = {
                 'Child_Id': idChild,
                 _interface: accessible(_interface, _identifiers).serialize(0)
             }
@@ -87,7 +97,7 @@ class WinEventHandler(IEventHandler):
     def __init__(self, interface_t, event_t, _identifiers):
         super(WinEventHandler, self).__init__(interface_t, _identifiers)
         WinEventHandler.info = self.info
-        WinEventHandler.event_found = None
+        WinEventHandler.found = None
 
         self.hook = self.register_event_hook(event_t)
         print 'Registed ' + event_t + ' hook'

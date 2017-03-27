@@ -16,6 +16,10 @@ from accessibility_api.accessibility_lib.scripts.constants import (
     TIMEOUT, WIN_EVENT_NAMES, WINEVENT_OUTOFCONTEXT
 )
 from accessibility_api.accessibility_lib.scripts.debug import DEBUG_ENABLED
+from accessibility_api.accessibility_lib.scripts.constants import (
+    SUCCESSFUL_RESPONSE, ERROR_RESPONSE
+)
+
 
 INVALID_EVENT = -1
 
@@ -28,7 +32,9 @@ class WinEventHandler(IEventHandler):
 
     # Helper function to find matching accessible
     @staticmethod
-    def _match_criteria(acc_ptr, search_criteria, child_id=CHILDID_SELF):
+    def _match_criteria(acc_ptr, child_id=CHILDID_SELF):
+        search_criteria = WinEventHandler.filtered_identifiers
+
         for criteria in search_criteria:
             prefix = 'acc'
             prop_value = getattr(acc_ptr, prefix + criteria)(child_id)
@@ -58,12 +64,11 @@ class WinEventHandler(IEventHandler):
         if DEBUG_ENABLED:
             print acc_ptr.accName(idChild)
 
-        _identifiers = WinEventHandler.info['IDENTIFIERS']
-        if WinEventHandler._match_criteria(acc_ptr, _identifiers, idChild):
-            _interface = WinEventHandler.info['INTERFACE']
+        if WinEventHandler._match_criteria(acc_ptr, idChild):
             WinEventHandler.found = {
                 'Child_Id': idChild,
-                _interface: accessible(_interface, _identifiers).serialize(0)
+                WinEventHandler.interface_t:
+                    accessible(WinEventHandler.params).serialize(0)
             }
 
     # Callback type
@@ -94,15 +99,32 @@ class WinEventHandler(IEventHandler):
         )
         return hook_result
 
-    def __init__(self, interface_t, event_t, _identifiers):
-        super(WinEventHandler, self).__init__(interface_t, _identifiers)
-        WinEventHandler.info = self.info
+    def __init__(self, event_t, params):
+        super(WinEventHandler, self).__init__(params)
+        WinEventHandler.params = self.params
+        WinEventHandler.interface_t = self.interface_t
+        WinEventHandler.filtered_identifiers = self.filtered_identifiers
         WinEventHandler.found = None
 
         self.hook = self.register_event_hook(event_t)
-        print 'Registed ' + event_t + ' hook'
+        print 'Registered ' + event_t + ' hook'
         if self.hook != INVALID_EVENT:
             self.listen_events()
+
+    def serialize_result(self):
+        """
+        Return event object
+        """
+        if WinEventHandler.found is None:
+            return {
+                'status': ERROR_RESPONSE,
+                'json': None
+            }
+        else:
+            return {
+                'status': SUCCESSFUL_RESPONSE,
+                'json': WinEventHandler.found
+            }
 
     def register_event_hook(self, event):
         """Register callback for event type"""

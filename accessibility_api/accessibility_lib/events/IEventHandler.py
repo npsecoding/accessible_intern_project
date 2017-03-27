@@ -7,11 +7,14 @@ You can obtain one at http://mozilla.org/MPL/2.0/.
 
 class IEventHandler(object):
     """EventHandler Object Interface Definition"""
-    def __init__(self, interface_t, identifiers):
-        self.info = {
-            'INTERFACE': interface_t,
-            'IDENTIFIERS': identifiers
+    def __init__(self, params):
+        self.params = params
+        self.interface_t = params.get('interface')
+        identifiers = {
+            'Name': params.get('name'),
+            'Role': params.get('role')
         }
+        self.filtered_identifiers = {k: v for k, v in identifiers.items() if v}
 
     def register_event_hook(self, event):
         """Track specific event"""

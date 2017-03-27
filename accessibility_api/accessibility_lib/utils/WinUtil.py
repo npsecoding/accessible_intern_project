@@ -9,10 +9,10 @@ from ctypes.wintypes import c_char_p, c_long
 from comtypes.automation import VARIANT
 from accessibility_api.accessibility_lib.scripts.constants import *
 from accessibility_api.accessibility_lib.scripts.debug import *
-from accessibility_api.accessibility_lib.utils.IUtil import IUtil
+from accessibility_api.accessibility_lib.utils.BaseUtil import BaseUtil
 
 
-class WinUtil(IUtil):
+class WinUtil(BaseUtil):
     """
     Utility definition for Windows Platform
     """
@@ -23,18 +23,6 @@ class WinUtil(IUtil):
         self._target = None
         self._simple_elements = dict()
         self.get_root_accessible()
-
-    def IAccessible_to_IAccessible2(self, ia_ptr):
-        # TODO
-        p_service = POINTER(IServiceProvider_t)()
-        p_service = ia_ptr.QueryInterface(IServiceProvider_t)
-
-        if p_service is not None:
-            ia2_ptr = POINTER(IAccessible2_t)()
-            ia2_ptr = p_service.QueryService(IID_IAccessible2, IAccessible2_t)
-
-            if ia2_ptr is not None:
-                print 'Accessible object implements IA2'
 
     def _accessible_object_from_window(self, hwnd):
         """

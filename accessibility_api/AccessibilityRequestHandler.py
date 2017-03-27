@@ -9,6 +9,9 @@ from BaseHTTPServer import BaseHTTPRequestHandler
 from urlparse import urlparse, parse_qs, parse_qsl
 from json import dumps
 from comtypes import CoInitialize
+from accessibility_api.accessibility_lib.scripts.constants import (
+    SUCCESSFUL_RESPONSE, ERROR_RESPONSE
+)
 from accessibility_api.accessibility_lib.scripts.accessible import accessible
 from accessibility_api.accessibility_lib.scripts.event import event
 from accessibility_api.accessibility_lib.scripts.commands import (
@@ -29,84 +32,79 @@ class AccessibilityRequestHandler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
 
-    def _parse_identifiers(self, params):
-        name = params.get('name')
-        role = params.get('role')
-
-        identifiers = {}
-        if name is not None:
-            identifiers["Name"] = name
-        if role is not None:
-            identifiers["Role"] = role
-
-        return identifiers
-
     def do_GET(self):
+        '''Proccess get requests'''
         url = urlparse(self.path)
         handler = getattr(self, "get_" + url.path[1:], None)
         if handler:
             handler(url.query)
-
         else:
             self.send_response(403, 'Invalid Request')
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
+
         return
+
+    def response(self, message, key, value, status):
+        """Returns appropriate response"""
+        response_args = {
+            ERROR_RESPONSE: message,
+            SUCCESSFUL_RESPONSE: dumps({key: value})
+        }[status]
+
+        return {
+            ERROR_RESPONSE: self._bad_request,
+            SUCCESSFUL_RESPONSE: self._successful_response
+        }[status](response_args)
 
     def get_accessible(self, urlquery):
         '''Retrieve accessible object'''
 
         params = dict(parse_qsl(urlquery))
-        identifiers = self._parse_identifiers(params)
-        acc_obj = accessible(params.get('interface'), identifiers)
-
         if params.get('interface') is None:
             self._bad_request('Bad Request: No interface specified')
             return
 
-        if acc_obj.found:
-            json = acc_obj.serialize(params.get('depth'))
-            self._successful_response(dumps({params.get('interface'): json}))
-        else:
-            self._bad_request('Bad Request: Accessible does not exist')
+        acc_obj = accessible(params).serialize_result(params.get('depth'))
+        self.response(
+            'Bad Request: No accessible exists',
+            params.get('interface'),
+            acc_obj.get('json'),
+            acc_obj.get('status')
+        )
 
     def get_event(self, urlquery):
         '''Listen for accessible event'''
 
         params = dict(parse_qsl(urlquery))
-        identifiers = self._parse_identifiers(params)
-
         if params.get('type') is None:
             self._bad_request('Bad Request: No event type specified')
             return
 
-        event_handler = event(params.get('interface'),
-                              params.get('type'), identifiers)
-
-        if event_handler.found is not None:
-            self._successful_response(dumps(event_handler.found))
-        else:
-            self._bad_request('Bad Request: No event occurred')
+        event_obj = event(params).serialize_result()
+        self.response(
+            'Bad Request: No event occurred',
+            params.get('type'),
+            event_obj.get('json'),
+            event_obj.get('status')
+        )
 
     def get_cmd(self, urlquery):
         '''Perform command on accessible'''
-        
+
         params = dict(parse_qsl(urlquery))
         params['param'] = parse_qs(urlquery).get('param')
-        identifiers = self._parse_identifiers(params)
-
         if params.get('function') is None:
             self._bad_request('Bad Request: No command specified')
             return
 
-        value = execute_command(params.get('interface'), identifiers,
-                                params.get('function'), params.get('param'))
-
-        if value is not "ERROR":
-            self._successful_response(dumps(value))
-        else:
-            self._bad_request('Bad Request:'
-                              'Command can not be executed on accessible')
+        command_obj = execute_command(params)
+        self.response(
+            'Bad Request: No command exists',
+            params.get('function'),
+            command_obj.get('json'),
+            command_obj.get('status')
+        )
 
 
 class WindowsAccessibilityRequestHandler(AccessibilityRequestHandler, object):

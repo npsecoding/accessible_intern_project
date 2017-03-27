@@ -10,9 +10,12 @@ from accessibility_api.accessibility_lib.events.WinEventHandler import (
 )
 
 
-def event(interface_t, event_t, _identifiers):
+def event(params):
     """Instantiate EventHandler object"""
+
+    event_t = params.get('type')
     protocol = {
         'Windows': WinEventHandler
     }
-    return protocol[system()](interface_t, event_t, _identifiers)
+
+    return protocol[system()](event_t, params)

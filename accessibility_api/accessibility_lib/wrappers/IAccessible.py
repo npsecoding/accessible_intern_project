@@ -8,20 +8,33 @@ from ctypes import oledll, create_string_buffer
 from accessibility_api.accessibility_lib.wrappers.BaseIAccessible import (
     BaseIAccessible
 )
-from ..scripts.constants import CHILDID_SELF, FULL_CHILD_TREE
+from ..scripts.constants import (
+    CHILDID_SELF, FULL_CHILD_TREE, SUCCESSFUL_RESPONSE, ERROR_RESPONSE
+)
 from ..scripts.debug import DEBUG_ENABLED
 
 
 class IAccessible(BaseIAccessible):
     """IAccessible windows interface"""
-    def __init__(self, identifiers):
-        super(IAccessible, self).__init__()
+    def __init__(self, params):
+        super(IAccessible, self).__init__(params)
         # Find accessible object associated with ID
-        self._target = self._util.get_target_accessible(identifiers)
+        self._target = self._util.get_target_accessible(self.filtered_identifiers)
+
+    def serialize_result(self, depth):
+        """
+        Return accessible object
+        """
         if self._target is None:
-            self.found = False
+            return {
+                'status': ERROR_RESPONSE,
+                'json': None
+            }
         else:
-            self.found = True
+            return {
+                'status': SUCCESSFUL_RESPONSE,
+                'json': self.serialize(depth)
+            }
 
     def serialize(self, child_depth=-1):
         """

@@ -8,9 +8,6 @@ from ctypes import POINTER
 from accessibility_api.accessibility_lib.scripts.constants import (
     IAccessible_t, IAccessible2_t
 )
-from accessibility_api.accessibility_lib.wrappers.IAccessible2 import (
-    IAccessible2
-)
 from accessibility_api.accessibility_lib.wrappers.IAccessible import (
     IAccessible
 )
@@ -21,10 +18,12 @@ def interface_ptr_types():
     return [POINTER(IAccessible_t), POINTER(IAccessible2_t)]
 
 
-def accessible(interface_t, identifiers):
+def accessible(params):
     """Instantiate the accessible object"""
+
+    interface_t = params.get('interface')
     protocol = {
         'IAccessible': IAccessible,
-        'IAccessible2': IAccessible2
     }
-    return protocol[interface_t](identifiers)
+
+    return protocol[interface_t](params)

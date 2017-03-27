@@ -1,7 +1,7 @@
 """Interface for Platform Utilities"""
 
 
-class IUtil(object):
+class BaseUtil(object):
     """Utility Inteface Definition"""
     def __init__(self):
         pass

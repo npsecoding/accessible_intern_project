@@ -7,17 +7,25 @@ You can obtain one at http://mozilla.org/MPL/2.0/.
 from accessibility_api.accessibility_lib.scripts.accessible import (
     accessible, interface_ptr_types
 )
+from accessibility_api.accessibility_lib.scripts.constants import (
+    SUCCESSFUL_RESPONSE, ERROR_RESPONSE
+)
 
 
-def execute_command(interface_t, identifiers, cmd, params):
+def execute_command(params):
     """Execute command on accessible object and returns value"""
-    value = None
-    acc_obj = accessible(interface_t, identifiers)
-    if not acc_obj.found:
-        value = "ERROR"
-        return value
 
-    _json = acc_obj.serialize()
+    cmd = params.get('function')
+    function_params = params.get('params')
+    value = None
+
+    acc_obj = accessible(params).serialize_result(0)
+    if acc_obj.get('status') == ERROR_RESPONSE:
+        return {
+            'status': ERROR_RESPONSE,
+            'json': None
+        }
+    _json = acc_obj.get('json')
 
     # Get accessible field from JSON
     if cmd in _json:
@@ -37,12 +45,21 @@ def execute_command(interface_t, identifiers, cmd, params):
 
         try:
             prefix = 'acc'
-            value = getattr(acc_obj._target, prefix + cmd)(*params)
+            value = getattr(acc_obj._target, prefix + cmd)(*function_params)
         except:
-            value = "ERROR"
+            return {
+                'status': ERROR_RESPONSE,
+                'json': None
+            }
 
     # Handles case when value is pointer by wrapping for serialization
     if type(value) in interface_ptr_types():
-        return acc_obj.semantic_wrap(value)
+        return {
+            'json': acc_obj.semantic_wrap(value),
+            'status': SUCCESSFUL_RESPONSE
+        }
     else:
-        return value
+        return {
+            'json': value,
+            'status': SUCCESSFUL_RESPONSE
+        }

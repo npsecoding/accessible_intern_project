@@ -51,10 +51,12 @@ assert RESPONSE['IAccessible']['Role'] == CHECKBOX
 print "-----------------EVENT-----------------------"
 RESPONSE = load(urlopen(EVENT_ENDPOINT % EVENT_PARAMS))
 STATE_CHECKED = 0x10
-assert RESPONSE['IAccessible']['Role'] == CHECKBOX
-assert RESPONSE['IAccessible']['State'] & STATE_CHECKED == STATE_CHECKED
+EVENT = 'EVENT_OBJECT_STATECHANGE'
+assert RESPONSE[EVENT]['IAccessible']['Role'] == CHECKBOX
+assert RESPONSE[EVENT]['IAccessible']['State'] & STATE_CHECKED == STATE_CHECKED
 
 print "-----------------CMD-----------------------"
 RESPONSE = load(urlopen(CMD_ENPOINT % CMD_PARAMS))
-defaultaction = 'uncheck'
-assert RESPONSE == defaultaction
+FUNCTION = 'DefaultAction'
+DEFAULTACTION = 'uncheck'
+assert RESPONSE[FUNCTION] == DEFAULTACTION

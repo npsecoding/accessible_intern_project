@@ -16,7 +16,7 @@ def execute_command(params):
     """Execute command on accessible object and returns value"""
 
     cmd = params.get('function')
-    function_params = params.get('params')
+    function_params = params.get('param')
     value = None
 
     acc_obj = accessible(params).serialize_result(0)
@@ -34,18 +34,18 @@ def execute_command(params):
     else:
         # Localize paramaters
         localized_params = []
-        for param in params:
+        for param in function_params:
             lparam = param.encode('UTF8')
             if lparam.isdigit():
                 localized_params.append(int(lparam))
             else:
                 localized_params.append(lparam)
-        params = []
-        params = localized_params
+        function_params = []
+        function_params = localized_params
 
         try:
             prefix = 'acc'
-            value = getattr(acc_obj._target, prefix + cmd)(*function_params)
+            value = getattr(acc_obj.get('target'), prefix + cmd)(*function_params)
         except:
             return {
                 'status': ERROR_RESPONSE,
@@ -55,7 +55,7 @@ def execute_command(params):
     # Handles case when value is pointer by wrapping for serialization
     if type(value) in interface_ptr_types():
         return {
-            'json': acc_obj.semantic_wrap(value),
+            'json': acc_obj.get('semantic_wrap')(value),
             'status': SUCCESSFUL_RESPONSE
         }
     else:

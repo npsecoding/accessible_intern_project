@@ -8,6 +8,7 @@ from ctypes import oledll, create_string_buffer
 from accessibility_api.accessibility_lib.wrappers.BaseIAccessible import (
     BaseIAccessible
 )
+from accessibility_api.accessibility_lib.utils.WinUtil import WinUtil
 from ..scripts.constants import (
     CHILDID_SELF, FULL_CHILD_TREE, SUCCESSFUL_RESPONSE, ERROR_RESPONSE
 )
@@ -19,7 +20,7 @@ class IAccessible(BaseIAccessible):
     def __init__(self, params):
         super(IAccessible, self).__init__(params)
         # Find accessible object associated with ID
-        self._target = self._util.get_target_accessible(self.filtered_identifiers)
+        self._target = WinUtil.get_target_accessible(self.filtered_identifiers)
 
     def serialize_result(self, depth):
         """
@@ -33,7 +34,9 @@ class IAccessible(BaseIAccessible):
         else:
             return {
                 'status': SUCCESSFUL_RESPONSE,
-                'json': self.serialize(depth)
+                'json': self.serialize(depth),
+                'target': self._target,
+                'semantic_wrap': self.semantic_wrap
             }
 
     def serialize(self, child_depth=-1):
@@ -156,10 +159,10 @@ class IAccessible(BaseIAccessible):
 
         # First is used to determine if a children field should wrap list
         parent = acc_ptr
-        children_ptr = self._util._accessible_children(parent)
+        children_ptr = WinUtil._accessible_children(parent)
 
         # Check if children are simple elements
-        if acc_ptr in self._util._simple_elements:
+        if acc_ptr in WinUtil.simple_elements:
             tree['Children'] = [self.semantic_wrap(acc_ptr, i)
                                 for i in range(1, acc_ptr.accChildCount + 1)]
             return

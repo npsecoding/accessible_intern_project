@@ -19,8 +19,15 @@ pip install -r requirements.txt
 ## Usage
 Launch Accessible API service.
 
+**Required:**
+port number
+
+**Optional:**
+platform
+verbose
+
 ```
-python AccessibilityAPIServer.py [port number] [platform]
+python AccessibilityAPIServer.py [port number] [platform] [verbose]
 ```
 
 ## API Reference

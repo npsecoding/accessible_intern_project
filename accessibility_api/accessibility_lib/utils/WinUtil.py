@@ -9,22 +9,17 @@ from ctypes.wintypes import c_char_p, c_long
 from comtypes.automation import VARIANT
 from accessibility_api.accessibility_lib.scripts.constants import *
 from accessibility_api.accessibility_lib.scripts.debug import *
-from accessibility_api.accessibility_lib.utils.BaseUtil import BaseUtil
 
 
-class WinUtil(BaseUtil):
+class WinUtil(object):
     """
     Utility definition for Windows Platform
     """
+    simple_elements = None
+    target = None
 
-    def __init__(self):
-        super(WinUtil, self).__init__()
-        self._root = None
-        self._target = None
-        self._simple_elements = dict()
-        self.get_root_accessible()
-
-    def _accessible_object_from_window(self, hwnd):
+    @staticmethod
+    def _accessible_object_from_window(hwnd):
         """
         Get the accessible object for window
         """
@@ -33,12 +28,13 @@ class WinUtil(BaseUtil):
             hwnd, OBJID_WINDOW, byref(IID_IAccessible), byref(acc_ptr))
 
         if res == S_OK:
-            acc_ptr.children = self._accessible_children(acc_ptr)
+            acc_ptr.children = WinUtil._accessible_children(acc_ptr)
             return acc_ptr
         else:
             raise ValueError("Can't get accessible from window")
 
-    def _accessible_children(self, accptr):
+    @staticmethod
+    def _accessible_children(accptr):
         """
         Get the children of an accessible object
         """
@@ -61,21 +57,23 @@ class WinUtil(BaseUtil):
                     acc_objs.append(acc)
                 # Child is Simple Element
                 elif child.vt == VT_I4:
-                    self._wrap_simple_element(accptr, child.value)
+                    WinUtil._wrap_simple_element(accptr, child.value)
             return acc_objs
         else:
             raise ValueError("Can't get accessible children")
 
-    def _wrap_simple_element(self, accptr, childid):
+    @staticmethod
+    def _wrap_simple_element(accptr, childid):
         """
         Associate simple element and parent accessible object
         """
-        if accptr not in self._simple_elements:
-            self._simple_elements[accptr] = [childid]
+        if accptr not in WinUtil.simple_elements:
+            WinUtil.simple_elements[accptr] = [childid]
         else:
-            self._simple_elements[accptr].append(childid)
+            WinUtil.simple_elements[accptr].append(childid)
 
-    def _match_criteria(self, node, search_criteria, child_id=CHILDID_SELF):
+    @staticmethod
+    def _match_criteria(node, search_criteria, child_id=CHILDID_SELF):
         for criteria in search_criteria:
             prefix = 'acc'
             prop_value = getattr(node, prefix + criteria)(child_id)
@@ -90,46 +88,48 @@ class WinUtil(BaseUtil):
 
         return True
 
-    def _traverse(self, node, visited, search_criteria):
+    @staticmethod
+    def _traverse(node, visited, search_criteria):
         """
         Traverse through accessible tree looking for node with the given ID
         """
 
-        if self._match_criteria(node, search_criteria):
-            self._target = node
-            self._target.isSimpleElement = False
+        if WinUtil._match_criteria(node, search_criteria):
+            WinUtil.target = node
+            WinUtil.target.isSimpleElement = False
             return
 
         if DEBUG_ENABLED:
             print_accessible(node)
 
         # Retrieve simple children or accessible children from node
-        acc_children = self._accessible_children(node)
+        acc_children = WinUtil._accessible_children(node)
 
         # Traverse through simple elements of node
-        if node in self._simple_elements:
-            for childid in self._simple_elements[node]:
+        if node in WinUtil.simple_elements:
+            for childid in WinUtil.simple_elements[node]:
                 if DEBUG_ENABLED:
                     print_simple(node, childid)
 
-                if self._match_criteria(node, search_criteria, childid):
-                    self._target = node
-                    self._target.isSimpleElement = True
-                    self._target.childId = childid
+                if WinUtil._match_criteria(node, search_criteria, childid):
+                    WinUtil.target = node
+                    WinUtil.target.isSimpleElement = True
+                    WinUtil.target.childId = childid
                     return
 
         # Traverse through accessible objects of node
         for child in acc_children:
             if child not in visited:
                 visited.add(node)
-                self._traverse(child, visited, search_criteria)
+                WinUtil._traverse(child, visited, search_criteria)
 
-    def _get_test_window(self):
+    @staticmethod
+    def _get_test_window():
         # Get the window for browser
         test_class = c_char_p("MozillaWindowClass")
         current_hwnd = windll.user32.FindWindowA(test_class, None)
         name = (
-            self._accessible_object_from_window(current_hwnd)
+            WinUtil._accessible_object_from_window(current_hwnd)
             .accName(CHILDID_SELF)
         )
         # Iterate through windows
@@ -139,25 +139,30 @@ class WinUtil(BaseUtil):
                 .FindWindowExA(None, current_hwnd, test_class, None)
             )
             name = (
-                self._accessible_object_from_window(current_hwnd)
+                WinUtil._accessible_object_from_window(current_hwnd)
                 .accName(CHILDID_SELF)
             )
         return current_hwnd
 
-    def get_root_accessible(self):
+    @staticmethod
+    def get_root_accessible():
         """
         Set root accessible object to test window
         """
-        test_window = self._get_test_window()
+        test_window = WinUtil._get_test_window()
         print 'Test Window: %d' % test_window
-        self._root = self._accessible_object_from_window(test_window)
-        return self._root
+        root = WinUtil._accessible_object_from_window(test_window)
+        return root
 
-    def get_target_accessible(self, search_criteria):
+    @staticmethod
+    def get_target_accessible(search_criteria):
         """
         Retrieve the accessible object for the given ID
         """
+        WinUtil.simple_elements = dict()
+        root = WinUtil.get_root_accessible()
         visited = set()
-        visited.add(self._root)
-        self._traverse(self._root, visited, search_criteria)
-        return self._target
+        visited.add(root)
+        WinUtil.target = None
+        WinUtil._traverse(root, visited, search_criteria)
+        return WinUtil.target

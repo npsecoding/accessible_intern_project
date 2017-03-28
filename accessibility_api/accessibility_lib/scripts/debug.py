@@ -10,7 +10,10 @@ DEBUG_ENABLED = False
 
 
 def print_accessible(node):
-    """Print the accessible name and role"""
+    """
+    Print the accessible name and role
+    """
+
     name = _unicode(node.accName(CHILDID_SELF))
     print '--------------------------'
     print 'Accessible Object'
@@ -21,7 +24,10 @@ def print_accessible(node):
 
 
 def print_simple(node, childid):
-    """Print the simple element owner, name and role"""
+    """
+    Print the simple element owner, name and role
+    """
+
     name = _unicode(node.accName(childid))
     print '--------------------------'
     print 'Simple Element'

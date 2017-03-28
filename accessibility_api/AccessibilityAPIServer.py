@@ -12,7 +12,10 @@ from accessibility_api.AccessibilityRequestHandler import (
 
 
 class AccessibilityAPIServer(object):
-    """ API service for Accessible Requests """
+    """
+    API service for Accessible Requests
+    """
+
     def __init__(self, port, platform=None, verbose=False, ip=""):
         self.verbose = verbose
         if self.verbose:
@@ -24,23 +27,29 @@ class AccessibilityAPIServer(object):
         self.server = TCPServer((ip, port), handler)
 
     def shutdown(self):
-        '''Stop accessibility server'''
+        """
+        Stop accessibility server
+        """
+
         if self.verbose:
             print '.............SERVICE STOPPED...........'
         self.server.shutdown()
         self.server.server_close()
 
     def start(self):
-        '''Start accessibility server'''
+        """
+        Start accessibility server
+        """
+
         if self.verbose:
             print '.............SERVICE RUNNING...............'
         self.server.serve_forever()
 
 if __name__ == '__main__':
     PARSER = ArgumentParser()
-    PARSER.add_argument("port", help="Port Number", type=int)
-    PARSER.add_argument("--platform", help="Platform Type", type=str)
-    PARSER.add_argument('--verbose', help="Print debug statments", type=bool)
+    PARSER.add_argument('port', help='Port Number', type=int)
+    PARSER.add_argument('--platform', help='Platform Type', type=str)
+    PARSER.add_argument('--verbose', help='Print debug statments', type=bool)
     ARGS = PARSER.parse_args()
 
     SERVER = AccessibilityAPIServer(ARGS.port, ARGS.platform, ARGS.verbose)

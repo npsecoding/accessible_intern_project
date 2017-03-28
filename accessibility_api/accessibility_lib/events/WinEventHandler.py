@@ -17,7 +17,7 @@ from accessibility_api.accessibility_lib.scripts.constants import (
 )
 from accessibility_api.accessibility_lib.scripts.debug import DEBUG_ENABLED
 from accessibility_api.accessibility_lib.scripts.constants import (
-    SUCCESSFUL_RESPONSE, ERROR_RESPONSE
+    SUCCESS, ERROR
 )
 
 
@@ -25,7 +25,10 @@ INVALID_EVENT = -1
 
 
 class WinEventHandler(IEventHandler):
-    """Handle Windows Events"""
+    """
+    Handle Windows Events
+    """
+
     # Store information about event used between callback and handler
     info = {}
     found = None
@@ -53,7 +56,10 @@ class WinEventHandler(IEventHandler):
     @staticmethod
     def accessible_from_event(hWinEventHook, event, hwnd, idObject,
                               idChild, dwEventThread, dwmsEventTime):
-        '''Get accessible object from event'''
+        """
+        Get accessible object from event
+        """
+
         acc_ptr = POINTER(IAccessible_t)()
         var_child = VARIANT()
         result = oledll.oleacc.AccessibleObjectFromEvent(
@@ -68,7 +74,7 @@ class WinEventHandler(IEventHandler):
             WinEventHandler.found = {
                 'Child_Id': idChild,
                 WinEventHandler.interface_t:
-                    accessible(WinEventHandler.params).serialize(0)
+                    accessible(WinEventHandler.params).get('result')
             }
 
     # Callback type
@@ -87,7 +93,10 @@ class WinEventHandler(IEventHandler):
     WINEVENT_PROC = WINPROC_TYPE(accessible_from_event.__func__)
 
     def register_event(self, event_start, event_end):
-        """Set hook for event"""
+        """
+        Set hook for event
+        """
+
         hook_result = windll.user32.SetWinEventHook(
             event_start,
             event_end,
@@ -103,6 +112,7 @@ class WinEventHandler(IEventHandler):
         super(WinEventHandler, self).__init__(params)
         WinEventHandler.params = self.params
         WinEventHandler.interface_t = self.interface_t
+        WinEventHandler.type_t = event_t
         WinEventHandler.filtered_identifiers = self.filtered_identifiers
         WinEventHandler.found = None
 
@@ -117,17 +127,21 @@ class WinEventHandler(IEventHandler):
         """
         if WinEventHandler.found is None:
             return {
-                'status': ERROR_RESPONSE,
-                'json': None
+                'error': ERROR,
+                'result': None
             }
         else:
+            interface_t = WinEventHandler.interface_t
             return {
-                'status': SUCCESSFUL_RESPONSE,
-                'json': WinEventHandler.found
+                'error': SUCCESS,
+                'result': {WinEventHandler.type_t:
+                           WinEventHandler.found[interface_t]}
             }
 
     def register_event_hook(self, event):
-        """Register callback for event type"""
+        """
+        Register callback for event type
+        """
 
         if event in WIN_EVENT_NAMES.values():
             event_index = WIN_EVENT_NAMES.values().index(event)
@@ -137,11 +151,17 @@ class WinEventHandler(IEventHandler):
             return INVALID_EVENT
 
     def unregesiter_event_hook(self):
-        """Unregister callback for event type"""
+        """
+        Unregister callback for event type
+        """
+
         result = windll.user32.UnhookWinEvent(self.hook)
         return result
 
     def listen_events(self):
-        """Get registered events and trigger callback"""
+        """
+        Get registered events and trigger callback
+        """
+
         PumpEvents(TIMEOUT)
         self.unregesiter_event_hook()

@@ -8,24 +8,32 @@ from accessibility_api.accessibility_lib.scripts.accessible import (
     accessible, interface_ptr_types
 )
 from accessibility_api.accessibility_lib.scripts.constants import (
-    SUCCESSFUL_RESPONSE, ERROR_RESPONSE
+    SUCCESS, ERROR
 )
+from comtypes import COMError
 
 
-def execute_command(params):
-    """Execute command on accessible object and returns value"""
+def command(params):
+    """
+    Execute command on accessible object and returns value
+    """
 
     cmd = params.get('function')
-    function_params = params.get('param')
-    value = None
-
-    acc_obj = accessible(params).serialize_result(0)
-    if acc_obj.get('status') == ERROR_RESPONSE:
+    if cmd is None:
         return {
-            'status': ERROR_RESPONSE,
-            'json': None
+            'error': ERROR,
+            'result': None
         }
-    _json = acc_obj.get('json')
+
+    acc_obj = accessible(params)
+    if acc_obj.get('error'):
+        return {
+            'error': ERROR,
+            'result': None
+        }
+
+    value = None
+    _json = acc_obj.get('result')[params.get('interface')]
 
     # Get accessible field from JSON
     if cmd in _json:
@@ -33,6 +41,7 @@ def execute_command(params):
     # Call accessible method
     else:
         # Localize paramaters
+        function_params = params.get('param')
         localized_params = []
         for param in function_params:
             lparam = param.encode('UTF8')
@@ -46,20 +55,20 @@ def execute_command(params):
         try:
             prefix = 'acc'
             value = getattr(acc_obj.get('target'), prefix + cmd)(*function_params)
-        except:
+        except COMError:
             return {
-                'status': ERROR_RESPONSE,
-                'json': None
+                'error': ERROR,
+                'result': None
             }
 
     # Handles case when value is pointer by wrapping for serialization
-    if type(value) in interface_ptr_types():
+    if value in interface_ptr_types():
         return {
-            'json': acc_obj.get('semantic_wrap')(value),
-            'status': SUCCESSFUL_RESPONSE
+            'error': SUCCESS,
+            'result': {cmd: acc_obj.get('semantic_wrap')(value)}
         }
     else:
         return {
-            'json': value,
-            'status': SUCCESSFUL_RESPONSE
+            'error': SUCCESS,
+            'result': {cmd: value}
         }

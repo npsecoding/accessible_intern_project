@@ -8,8 +8,8 @@ from comtypes import IServiceProvider
 from comtypes.gen.Accessibility import IAccessible
 from comtypes.gen.IAccessible2Lib import IAccessible2
 
-SUCCESSFUL_RESPONSE = 'result'
-ERROR_RESPONSE = 'error'
+SUCCESS = False
+ERROR = True
 
 TIMEOUT = 10
 

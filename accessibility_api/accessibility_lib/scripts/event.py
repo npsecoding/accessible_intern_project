@@ -8,14 +8,25 @@ from platform import system
 from accessibility_api.accessibility_lib.events.WinEventHandler import (
     WinEventHandler
 )
+from accessibility_api.accessibility_lib.scripts.constants import (
+    ERROR
+)
 
 
 def event(params):
-    """Instantiate EventHandler object"""
+    """
+    Instantiate EventHandler object
+    """
 
     event_t = params.get('type')
+    if event_t is None:
+        return {
+            'error': ERROR,
+            'result': None
+        }
+
     protocol = {
         'Windows': WinEventHandler
     }
 
-    return protocol[system()](event_t, params)
+    return protocol[system()](event_t, params).serialize_result()

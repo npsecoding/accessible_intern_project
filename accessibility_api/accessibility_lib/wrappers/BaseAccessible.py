@@ -5,8 +5,11 @@ You can obtain one at http://mozilla.org/MPL/2.0/.
 '''
 
 
-class BaseIAccessible(object):
-    """Accessible Object Interface Definition"""
+class BaseAccessible(object):
+    """
+    Accessible Object Interface Definition
+    """
+
     def __init__(self, params):
         identifiers = {
             'Name': params.get('name'),
@@ -15,6 +18,8 @@ class BaseIAccessible(object):
         self.filtered_identifiers = {k: v for k, v in identifiers.items() if v}
 
     def serialize_result(self, depth=-1):
-        """Accessible Object to JSON"""
+        """
+        Accessible Object to JSON
+        """
         raise NotImplementedError
 

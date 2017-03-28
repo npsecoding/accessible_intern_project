@@ -44,19 +44,19 @@ ACCESSSIBLE_PARAMS = urlencode({
 ACCESSIBLE_ENDPOINT = ENDPOINT_PREFIX + "/accessible?%s"
 
 print "-----------------ACCESSIBLE------------------"
-RESPONSE = load(urlopen(ACCESSIBLE_ENDPOINT % ACCESSSIBLE_PARAMS))
+RESPONSE = load(urlopen(ACCESSIBLE_ENDPOINT % ACCESSSIBLE_PARAMS))['result']
 CHECKBOX = 0x2C
 assert RESPONSE['IAccessible']['Role'] == CHECKBOX
 
 print "-----------------EVENT-----------------------"
-RESPONSE = load(urlopen(EVENT_ENDPOINT % EVENT_PARAMS))
+RESPONSE = load(urlopen(EVENT_ENDPOINT % EVENT_PARAMS))['result']
 STATE_CHECKED = 0x10
 EVENT = 'EVENT_OBJECT_STATECHANGE'
 assert RESPONSE[EVENT]['IAccessible']['Role'] == CHECKBOX
 assert RESPONSE[EVENT]['IAccessible']['State'] & STATE_CHECKED == STATE_CHECKED
 
 print "-----------------CMD-----------------------"
-RESPONSE = load(urlopen(CMD_ENPOINT % CMD_PARAMS))
+RESPONSE = load(urlopen(CMD_ENPOINT % CMD_PARAMS))['result']
 FUNCTION = 'DefaultAction'
 DEFAULTACTION = 'uncheck'
 assert RESPONSE[FUNCTION] == DEFAULTACTION

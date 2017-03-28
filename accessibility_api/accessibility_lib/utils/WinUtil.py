@@ -15,6 +15,7 @@ class WinUtil(object):
     """
     Utility definition for Windows Platform
     """
+
     simple_elements = None
     target = None
 
@@ -23,6 +24,7 @@ class WinUtil(object):
         """
         Get the accessible object for window
         """
+
         acc_ptr = POINTER(IAccessible_t)()
         res = oledll.oleacc.AccessibleObjectFromWindow(
             hwnd, OBJID_WINDOW, byref(IID_IAccessible), byref(acc_ptr))
@@ -31,13 +33,14 @@ class WinUtil(object):
             acc_ptr.children = WinUtil._accessible_children(acc_ptr)
             return acc_ptr
         else:
-            raise ValueError("Can't get accessible from window")
+            raise ValueError('Failed to get accessible from window')
 
     @staticmethod
     def _accessible_children(accptr):
         """
         Get the children of an accessible object
         """
+
         ichild_start = 0
         cc_children = accptr.accChildCount
         pc_obtained = c_long()
@@ -60,13 +63,14 @@ class WinUtil(object):
                     WinUtil._wrap_simple_element(accptr, child.value)
             return acc_objs
         else:
-            raise ValueError("Can't get accessible children")
+            raise ValueError('Failed to get accessible children')
 
     @staticmethod
     def _wrap_simple_element(accptr, childid):
         """
         Associate simple element and parent accessible object
         """
+
         if accptr not in WinUtil.simple_elements:
             WinUtil.simple_elements[accptr] = [childid]
         else:
@@ -74,6 +78,10 @@ class WinUtil(object):
 
     @staticmethod
     def _match_criteria(node, search_criteria, child_id=CHILDID_SELF):
+        """
+        Find matching accessible with given criteria
+        """
+
         for criteria in search_criteria:
             prefix = 'acc'
             prop_value = getattr(node, prefix + criteria)(child_id)
@@ -125,8 +133,12 @@ class WinUtil(object):
 
     @staticmethod
     def _get_test_window():
+        """
+        Get test window handle
+        """
+
         # Get the window for browser
-        test_class = c_char_p("MozillaWindowClass")
+        test_class = c_char_p('MozillaWindowClass')
         current_hwnd = windll.user32.FindWindowA(test_class, None)
         name = (
             WinUtil._accessible_object_from_window(current_hwnd)
@@ -149,6 +161,7 @@ class WinUtil(object):
         """
         Set root accessible object to test window
         """
+
         test_window = WinUtil._get_test_window()
         print 'Test Window: %d' % test_window
         root = WinUtil._accessible_object_from_window(test_window)
@@ -159,6 +172,7 @@ class WinUtil(object):
         """
         Retrieve the accessible object for the given ID
         """
+
         WinUtil.simple_elements = dict()
         root = WinUtil.get_root_accessible()
         visited = set()

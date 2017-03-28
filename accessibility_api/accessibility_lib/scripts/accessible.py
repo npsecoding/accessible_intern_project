@@ -11,19 +11,32 @@ from accessibility_api.accessibility_lib.scripts.constants import (
 from accessibility_api.accessibility_lib.wrappers.IAccessible import (
     IAccessible
 )
+from accessibility_api.accessibility_lib.scripts.constants import (
+    ERROR
+)
 
 
 def interface_ptr_types():
-    """Return supported interface pointer types"""
+    """
+    Return supported interface pointer types
+    """
+
     return [POINTER(IAccessible_t), POINTER(IAccessible2_t)]
 
 
 def accessible(params):
-    """Instantiate the accessible object"""
-
+    """
+    Instantiate the accessible object
+    """
     interface_t = params.get('interface')
+    if interface_t is None:
+        return {
+            'error': ERROR,
+            'result': None
+        }
+
     protocol = {
-        'IAccessible': IAccessible,
+        'IAccessible': IAccessible
     }
 
-    return protocol[interface_t](params)
+    return protocol[interface_t](params).serialize_result(params.get('depth'))

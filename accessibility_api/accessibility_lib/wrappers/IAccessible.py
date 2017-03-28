@@ -5,36 +5,40 @@ You can obtain one at http://mozilla.org/MPL/2.0/.
 '''
 
 from ctypes import oledll, create_string_buffer
-from accessibility_api.accessibility_lib.wrappers.BaseIAccessible import (
-    BaseIAccessible
+from accessibility_api.accessibility_lib.wrappers.BaseAccessible import (
+    BaseAccessible
 )
 from accessibility_api.accessibility_lib.utils.WinUtil import WinUtil
 from ..scripts.constants import (
-    CHILDID_SELF, FULL_CHILD_TREE, SUCCESSFUL_RESPONSE, ERROR_RESPONSE
+    CHILDID_SELF, FULL_CHILD_TREE, SUCCESS, ERROR
 )
 from ..scripts.debug import DEBUG_ENABLED
 
 
-class IAccessible(BaseIAccessible):
-    """IAccessible windows interface"""
+class IAccessible(BaseAccessible):
+    """
+    IAccessible windows interface
+    """
+
     def __init__(self, params):
         super(IAccessible, self).__init__(params)
         # Find accessible object associated with ID
         self._target = WinUtil.get_target_accessible(self.filtered_identifiers)
 
-    def serialize_result(self, depth):
+    def serialize_result(self, depth=-1):
         """
         Return accessible object
         """
+
         if self._target is None:
             return {
-                'status': ERROR_RESPONSE,
-                'json': None
+                'error': ERROR,
+                'result': None
             }
         else:
             return {
-                'status': SUCCESSFUL_RESPONSE,
-                'json': self.serialize(depth),
+                'error': SUCCESS,
+                'result': {'IAccessible': self.serialize(depth)},
                 'target': self._target,
                 'semantic_wrap': self.semantic_wrap
             }
@@ -65,9 +69,6 @@ class IAccessible(BaseIAccessible):
                                                  child_depth, True),
             'accParent': self.semantic_wrap(parent_attrib),
             'accFocus': self.get_acc_focus(self._target)
-            # Localized role and state
-            # 'accRole': localized_role(role_attrib(CHILDID_SELF)),
-            # 'accState': localized_state(state_attrib(CHILDID_SELF))
         }
         node = self._target
 
@@ -82,7 +83,9 @@ class IAccessible(BaseIAccessible):
                                 custom_callable, not_callable)
 
     def semantic_wrap(self, acc_ptr, child_id=CHILDID_SELF):
-        "Wrap children and parent pointers exposing semantics"
+        """
+        Wrap children and parent pointers exposing semantics
+        """
 
         # Handle cases when accessible object doesn't have:
         # keyboard focus
@@ -95,20 +98,19 @@ class IAccessible(BaseIAccessible):
         attributes = ['accName', 'accChildCount', 'accRole',
                       'accState', 'accValue']
         not_callable = ['accChildCount', 'accSelection']
-        custom_callable = {
-            # Localized role and state
-            # 'accRole': localized_role(role_attrib(child_id)),
-            # 'accState': localized_state(state_attrib(child_id))
-        }
+        custom_callable = {}
 
         return self.parsed_json(acc_ptr, attributes, custom_callable,
                                 not_callable, child_id)
 
     def parsed_json(self, acc_ptr, attribs, custom_callable,
                     not_callable, child_id=CHILDID_SELF):
-        "Does parsing of fields and determines call type for value"
+        """
+        Does parsing of fields and determines call type for value
+        """
+
         json = {}
-        prefix = "acc"
+        prefix = 'acc'
 
         # Add field to show child is simple element
         if DEBUG_ENABLED:
@@ -131,13 +133,16 @@ class IAccessible(BaseIAccessible):
             else:
                 try:
                     json[field] = getattr(acc_ptr, attribute)(child_id)
-                except:
-                    json[field] = "Attribute Not Supported"
+                except AttributeError:
+                    json[field] = 'Attribute Not Supported'
 
         return json
 
     def get_acc_focus(self, acc_ptr):
-        """Get focused object"""
+        """
+        Get focused object
+        """
+
         focus_val = getattr(acc_ptr, 'accFocus')
         if focus_val is None:
             return None
@@ -147,7 +152,10 @@ class IAccessible(BaseIAccessible):
             return self.semantic_wrap(focus_val)
 
     def get_acc_children(self, acc_ptr, tree, child_depth, first):
-        """Get child accessible"""
+        """
+        Get child accessible
+        """
+
         # Check if there are children
         if acc_ptr.accChildCount is 0:
             return
@@ -158,8 +166,7 @@ class IAccessible(BaseIAccessible):
         child_depth -= 1
 
         # First is used to determine if a children field should wrap list
-        parent = acc_ptr
-        children_ptr = WinUtil._accessible_children(parent)
+        children_ptr = WinUtil._accessible_children(acc_ptr)
 
         # Check if children are simple elements
         if acc_ptr in WinUtil.simple_elements:
@@ -182,28 +189,3 @@ class IAccessible(BaseIAccessible):
 
         return tree
 
-
-def localized_role(dw_role):
-    """Get localized role from role constant"""
-    cch_role_max = 50
-    lpsz_role = create_string_buffer(cch_role_max)
-    oledll.oleacc.GetRoleTextA(dw_role, lpsz_role, cch_role_max)
-    return lpsz_role.value
-
-
-def localized_state(dw_state):
-    """Get localized state from state constant"""
-    states = []
-    # Retrieve state text
-    for shift in xrange(64):
-        state_bit = 1 << shift
-        if state_bit & dw_state:
-            states.append(_get_state_text(state_bit & dw_state))
-    return states
-
-
-def _get_state_text(state_bit):
-    cch_role_max = 100
-    lpsz_state_bit = create_string_buffer(cch_role_max)
-    oledll.oleacc.GetStateTextA(state_bit, lpsz_state_bit, cch_role_max)
-    return lpsz_state_bit.value

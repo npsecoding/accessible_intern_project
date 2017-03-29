@@ -8,23 +8,18 @@ from ctypes import byref, wintypes, windll, oledll, POINTER, WINFUNCTYPE
 from comtypes.client import PumpEvents
 from comtypes.automation import VARIANT
 from accessibility_api.accessibility_lib.scripts.accessible import accessible
-from accessibility_api.accessibility_lib.events.IEventHandler import (
-    IEventHandler
+from accessibility_api.accessibility_lib.utils.WinUtil import WinUtil
+from accessibility_api.accessibility_lib.events.BaseEventHandler import (
+    BaseEventHandler
 )
 from accessibility_api.accessibility_lib.scripts.constants import (
-    IAccessible_t, S_OK, CHILDID_SELF,
+    IAccessible_t, S_OK, INVALID_EVENT,
     TIMEOUT, WIN_EVENT_NAMES, WINEVENT_OUTOFCONTEXT
 )
 from accessibility_api.accessibility_lib.scripts.debug import DEBUG_ENABLED
-from accessibility_api.accessibility_lib.scripts.constants import (
-    SUCCESS, ERROR
-)
 
 
-INVALID_EVENT = -1
-
-
-class WinEventHandler(IEventHandler):
+class WinEventHandler(BaseEventHandler):
     """
     Handle Windows Events
     """
@@ -32,25 +27,6 @@ class WinEventHandler(IEventHandler):
     # Store information about event used between callback and handler
     info = {}
     found = None
-
-    # Helper function to find matching accessible
-    @staticmethod
-    def _match_criteria(acc_ptr, child_id=CHILDID_SELF):
-        search_criteria = WinEventHandler.filtered_identifiers
-
-        for criteria in search_criteria:
-            prefix = 'acc'
-            prop_value = getattr(acc_ptr, prefix + criteria)(child_id)
-            search_value = search_criteria[criteria]
-
-            # If value is a number convert from unicode to int
-            if isinstance(prop_value, int):
-                search_value = int(search_value)
-
-            if prop_value != search_value:
-                return False
-
-        return True
 
     # Callback function
     @staticmethod
@@ -70,7 +46,7 @@ class WinEventHandler(IEventHandler):
         if DEBUG_ENABLED:
             print acc_ptr.accName(idChild)
 
-        if WinEventHandler._match_criteria(acc_ptr, idChild):
+        if WinUtil.match_criteria(acc_ptr, WinEventHandler.params, idChild):
             WinEventHandler.found = {
                 'Child_Id': idChild,
                 WinEventHandler.interface_t:
@@ -113,13 +89,13 @@ class WinEventHandler(IEventHandler):
         WinEventHandler.params = self.params
         WinEventHandler.interface_t = self.interface_t
         WinEventHandler.type_t = event_t
-        WinEventHandler.filtered_identifiers = self.filtered_identifiers
         WinEventHandler.found = None
 
         self.hook = self.register_event_hook(event_t)
-        print 'Registered ' + event_t + ' hook'
+        if DEBUG_ENABLED:
+            print 'Registered ' + event_t + ' hook'
         if self.hook != INVALID_EVENT:
-            self.listen_events()
+            self.listen_to_events()
 
     def serialize_result(self):
         """
@@ -127,13 +103,12 @@ class WinEventHandler(IEventHandler):
         """
         if WinEventHandler.found is None:
             return {
-                'error': ERROR,
-                'result': None
+                'error': True,
+                'message': WinEventHandler.type_t + ' not found'
             }
         else:
             interface_t = WinEventHandler.interface_t
             return {
-                'error': SUCCESS,
                 'result': {WinEventHandler.type_t:
                            WinEventHandler.found[interface_t]}
             }
@@ -143,9 +118,8 @@ class WinEventHandler(IEventHandler):
         Register callback for event type
         """
 
-        if event in WIN_EVENT_NAMES.values():
-            event_index = WIN_EVENT_NAMES.values().index(event)
-            event_type = WIN_EVENT_NAMES.keys()[event_index]
+        event_type = WIN_EVENT_NAMES.get(event)
+        if event_type:
             return self.register_event(event_type, event_type)
         else:
             return INVALID_EVENT
@@ -158,7 +132,7 @@ class WinEventHandler(IEventHandler):
         result = windll.user32.UnhookWinEvent(self.hook)
         return result
 
-    def listen_events(self):
+    def listen_to_events(self):
         """
         Get registered events and trigger callback
         """

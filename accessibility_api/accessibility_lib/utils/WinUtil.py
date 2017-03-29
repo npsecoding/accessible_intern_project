@@ -77,32 +77,12 @@ class WinUtil(object):
             WinUtil.simple_elements[accptr].append(childid)
 
     @staticmethod
-    def _match_criteria(node, search_criteria, child_id=CHILDID_SELF):
-        """
-        Find matching accessible with given criteria
-        """
-
-        for criteria in search_criteria:
-            prefix = 'acc'
-            prop_value = getattr(node, prefix + criteria)(child_id)
-            search_value = search_criteria[criteria]
-
-            # If value is a number convert from unicode to int
-            if isinstance(prop_value, int):
-                search_value = int(search_value)
-
-            if prop_value != search_value:
-                return False
-
-        return True
-
-    @staticmethod
     def _traverse(node, visited, search_criteria):
         """
         Traverse through accessible tree looking for node with the given ID
         """
 
-        if WinUtil._match_criteria(node, search_criteria):
+        if WinUtil.match_criteria(node, search_criteria):
             WinUtil.target = node
             WinUtil.target.isSimpleElement = False
             return
@@ -119,7 +99,7 @@ class WinUtil(object):
                 if DEBUG_ENABLED:
                     print_simple(node, childid)
 
-                if WinUtil._match_criteria(node, search_criteria, childid):
+                if WinUtil.match_criteria(node, search_criteria, childid):
                     WinUtil.target = node
                     WinUtil.target.isSimpleElement = True
                     WinUtil.target.childId = childid
@@ -130,6 +110,41 @@ class WinUtil(object):
             if child not in visited:
                 visited.add(node)
                 WinUtil._traverse(child, visited, search_criteria)
+
+    @staticmethod
+    def get_indentifiers(params):
+        """
+        Get accessibility indentifiers
+        """
+
+        identifiers = {
+            'Name': params.get('name'),
+            'Role': params.get('role')
+        }
+        filtered_identifiers = {k: v for k, v in identifiers.items() if v}
+
+        return filtered_identifiers
+
+    @staticmethod
+    def match_criteria(node, params, child_id=CHILDID_SELF):
+        """
+        Find matching accessible with given criteria
+        """
+
+        search_criteria = WinUtil.get_indentifiers(params)
+        for criteria in search_criteria:
+            prefix = 'acc'
+            prop_value = getattr(node, prefix + criteria)(child_id)
+            search_value = search_criteria[criteria]
+
+            # If value is a number convert from unicode to int
+            if isinstance(prop_value, int):
+                search_value = int(search_value)
+
+            if prop_value != search_value:
+                return False
+
+        return True
 
     @staticmethod
     def _get_test_window():
@@ -168,15 +183,17 @@ class WinUtil(object):
         return root
 
     @staticmethod
-    def get_target_accessible(search_criteria):
+    def get_target_accessible(params):
         """
         Retrieve the accessible object for the given ID
         """
 
-        WinUtil.simple_elements = dict()
-        root = WinUtil.get_root_accessible()
-        visited = set()
-        visited.add(root)
         WinUtil.target = None
-        WinUtil._traverse(root, visited, search_criteria)
+        WinUtil.simple_elements = dict()
+        visited = set()
+
+        root = WinUtil.get_root_accessible()
+        visited.add(root)
+        WinUtil._traverse(root, visited, params)
+
         return WinUtil.target

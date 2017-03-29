@@ -8,9 +8,6 @@ from platform import system
 from accessibility_api.accessibility_lib.events.WinEventHandler import (
     WinEventHandler
 )
-from accessibility_api.accessibility_lib.scripts.constants import (
-    ERROR
-)
 
 
 def event(params):
@@ -21,8 +18,8 @@ def event(params):
     event_t = params.get('type')
     if event_t is None:
         return {
-            'error': ERROR,
-            'result': None
+            'error': True,
+            'message': 'No event type given'
         }
 
     protocol = {

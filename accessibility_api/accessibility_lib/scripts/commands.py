@@ -7,9 +7,6 @@ You can obtain one at http://mozilla.org/MPL/2.0/.
 from accessibility_api.accessibility_lib.scripts.accessible import (
     accessible, interface_ptr_types
 )
-from accessibility_api.accessibility_lib.scripts.constants import (
-    SUCCESS, ERROR
-)
 from comtypes import COMError
 
 
@@ -21,54 +18,49 @@ def command(params):
     cmd = params.get('function')
     if cmd is None:
         return {
-            'error': ERROR,
-            'result': None
+            'error': True,
+            'message': 'No command given'
         }
 
     acc_obj = accessible(params)
     if acc_obj.get('error'):
         return {
-            'error': ERROR,
-            'result': None
+            'error': True,
+            'message': 'No accessible found'
         }
 
     value = None
-    _json = acc_obj.get('result')[params.get('interface')]
+    json = acc_obj.get('result')[params.get('interface')]
 
     # Get accessible field from JSON
-    if cmd in _json:
-        value = _json[cmd]
+    if cmd in json:
+        value = json[cmd]
     # Call accessible method
     else:
         # Localize paramaters
-        function_params = params.get('param')
-        localized_params = []
-        for param in function_params:
+        function_params = []
+        for param in params.get('param'):
             lparam = param.encode('UTF8')
             if lparam.isdigit():
-                localized_params.append(int(lparam))
+                function_params.append(int(lparam))
             else:
-                localized_params.append(lparam)
-        function_params = []
-        function_params = localized_params
-
+                function_params.append(lparam)
         try:
             prefix = 'acc'
-            value = getattr(acc_obj.get('target'), prefix + cmd)(*function_params)
+            value = getattr(acc_obj.get('target'),
+                            prefix + cmd)(*function_params)
         except COMError:
             return {
-                'error': ERROR,
-                'result': None
+                'error': True,
+                'message': 'Function failed to execute with paramaters'
             }
 
     # Handles case when value is pointer by wrapping for serialization
-    if value in interface_ptr_types():
+    if isinstance(value, interface_ptr_types()):
         return {
-            'error': SUCCESS,
-            'result': {cmd: acc_obj.get('semantic_wrap')(value)}
+            'result': acc_obj.get('semantic_wrap')(value)
         }
     else:
         return {
-            'error': SUCCESS,
-            'result': {cmd: value}
+            'result': value
         }

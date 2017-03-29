@@ -4,15 +4,23 @@ License, v. 2.0. If a copy of the MPL was not distributed with this file,
 You can obtain one at http://mozilla.org/MPL/2.0/.
 '''
 
-from ctypes import oledll, create_string_buffer
+from comtypes import COMError
 from accessibility_api.accessibility_lib.wrappers.BaseAccessible import (
     BaseAccessible
 )
 from accessibility_api.accessibility_lib.utils.WinUtil import WinUtil
 from ..scripts.constants import (
-    CHILDID_SELF, FULL_CHILD_TREE, SUCCESS, ERROR
+    CHILDID_SELF, FULL_CHILD_TREE
 )
 from ..scripts.debug import DEBUG_ENABLED
+
+FLAT_PROPERTIES = [
+    'accChildCount', 'accDefaultAction',
+    'accDescription', 'accHelp', 'accHelpTopic',
+    'accKeyboardShortcut', 'accLocation', 'accName',
+    'accRole', 'accState', 'accValue'
+]
+TREE_PROPERTIES = ['accChildren', 'accParent', 'accFocus', 'accSelection']
 
 
 class IAccessible(BaseAccessible):
@@ -23,64 +31,42 @@ class IAccessible(BaseAccessible):
     def __init__(self, params):
         super(IAccessible, self).__init__(params)
         # Find accessible object associated with ID
-        self._target = WinUtil.get_target_accessible(self.filtered_identifiers)
+        self._target = WinUtil.get_target_accessible(params)
+        self.depth = None
 
-    def serialize_result(self, depth=-1):
+    def serialize_result(self, depth):
         """
         Return accessible object
         """
 
+        self.depth = depth
+
         if self._target is None:
             return {
-                'error': ERROR,
-                'result': None
+                'error': True,
+                'message': 'No accessible found'
             }
         else:
             return {
-                'error': SUCCESS,
-                'result': {'IAccessible': self.serialize(depth)},
+                'result': {'IAccessible': self.serialize()},
                 'target': self._target,
                 'semantic_wrap': self.semantic_wrap
             }
 
-    def serialize(self, child_depth=-1):
+    def serialize(self):
         """
         Serialize accessible into json
         """
 
-        # Set child depth to full tree if none specified
-        if child_depth is None:
-            child_depth = -1
-        else:
-            child_depth = int(child_depth)
-
-        child_tree = {'Children': None}
-        parent_attrib = getattr(self._target, 'accParent')
-        role_attrib = getattr(self._target, 'accRole')
-        state_attrib = getattr(self._target, 'accState')
-        attributes = [
-            'accChildCount', 'accChildren', 'accDefaultAction',
-            'accDescription', 'accFocus', 'accHelp', 'accHelpTopic',
-            'accKeyboardShortcut', 'accLocation', 'accName', 'accParent',
-            'accRole', 'accSelection', 'accState', 'accValue']
-        not_callable = ['accChildCount', 'accSelection']
-        custom_callable = {
-            'accChildren': self.get_acc_children(self._target, child_tree,
-                                                 child_depth, True),
-            'accParent': self.semantic_wrap(parent_attrib),
-            'accFocus': self.get_acc_focus(self._target)
-        }
-        node = self._target
-
+        attributes = FLAT_PROPERTIES[:]
+        attributes.extend(TREE_PROPERTIES)
+        childid = CHILDID_SELF
         # If object is simple element remove irrelevant children fields
-        if node.isSimpleElement:
+        if self._target.isSimpleElement:
             attributes.remove('accChildren')
-            del custom_callable['accChildren']
-            return self.parsed_json(node, attributes, custom_callable,
-                                    not_callable, node.childId)
+            childid = self._target.childId
 
-        return self.parsed_json(node, attributes,
-                                custom_callable, not_callable)
+        return self.to_json(self._target, attributes, childid)
 
     def semantic_wrap(self, acc_ptr, child_id=CHILDID_SELF):
         """
@@ -93,18 +79,10 @@ class IAccessible(BaseAccessible):
         if acc_ptr is None:
             return None
 
-        role_attrib = getattr(self._target, 'accRole')
-        state_attrib = getattr(self._target, 'accState')
-        attributes = ['accName', 'accChildCount', 'accRole',
-                      'accState', 'accValue']
-        not_callable = ['accChildCount', 'accSelection']
-        custom_callable = {}
+        attributes = FLAT_PROPERTIES[:]
+        return self.to_json(acc_ptr, attributes, child_id)
 
-        return self.parsed_json(acc_ptr, attributes, custom_callable,
-                                not_callable, child_id)
-
-    def parsed_json(self, acc_ptr, attribs, custom_callable,
-                    not_callable, child_id=CHILDID_SELF):
+    def to_json(self, acc_ptr, attributes, child_id=CHILDID_SELF):
         """
         Does parsing of fields and determines call type for value
         """
@@ -119,39 +97,78 @@ class IAccessible(BaseAccessible):
             else:
                 json['SimpleElement'] = False
 
-        for attribute in attribs:
+        for attribute in attributes:
             field = attribute[len(prefix):]
-            if attribute in custom_callable.keys():
-                json[field] = custom_callable[attribute]
-            elif attribute in not_callable:
-                # Simple elements don't have children
-                if field == 'ChildCount' and child_id != CHILDID_SELF:
-                    json[field] = 0
-                    continue
 
-                json[field] = getattr(acc_ptr, attribute)
+            if attribute in TREE_PROPERTIES:
+                if field == 'Children':
+                    if acc_ptr.accChildCount == 0:
+                        continue
+                    json[field] = getattr(self, 'get_' + field.lower())()\
+                        .get('Children')
+                else:
+                    json[field] = getattr(self, 'get_' + field.lower())()
             else:
-                try:
-                    json[field] = getattr(acc_ptr, attribute)(child_id)
-                except AttributeError:
-                    json[field] = 'Attribute Not Supported'
+                if callable(getattr(acc_ptr, attribute)):
+                    try:
+                        json[field] = getattr(acc_ptr, attribute)(child_id)
+                    except AttributeError:
+                        json[field] = 'Attribute Not Supported'
+                    except COMError:
+                        json[field] = 'Member Not Found'
+                else:
+                    json[field] = getattr(acc_ptr, attribute)
 
         return json
 
-    def get_acc_focus(self, acc_ptr):
+    def get_focus(self):
         """
         Get focused object
         """
 
-        focus_val = getattr(acc_ptr, 'accFocus')
-        if focus_val is None:
-            return None
-        elif isinstance(focus_val, int):
-            return self.semantic_wrap(acc_ptr.accChild(focus_val))
-        else:
-            return self.semantic_wrap(focus_val)
+        focus_val = getattr(self._target, 'accFocus')
+        return self.process_return(self._target, focus_val)
 
-    def get_acc_children(self, acc_ptr, tree, child_depth, first):
+    def get_selection(self):
+        """
+        Get selected object
+        """
+
+        select_val = getattr(self._target, 'accSelection')
+        return self.process_return(self._target, select_val)
+
+    def process_return(self, acc_ptr, value):
+        """
+        Handle multiple return types
+        """
+
+        if value is None:
+            return None
+        elif isinstance(value, int):
+            if acc_ptr in WinUtil.simple_elements:
+                return self.semantic_wrap(acc_ptr, value)
+            else:
+                return self.semantic_wrap(acc_ptr.accChild(value))
+        else:
+            return self.semantic_wrap(value)
+
+    def get_parent(self):
+        """
+        Get parent object
+        """
+
+        parent = getattr(self._target, 'accParent')
+        return self.semantic_wrap(parent)
+
+    def get_children(self):
+        """
+        Get children of accessible
+        """
+
+        tree = {}
+        return self.children(self._target, self.depth, tree)
+
+    def children(self, acc_ptr, child_depth, tree):
         """
         Get child accessible
         """
@@ -174,18 +191,10 @@ class IAccessible(BaseAccessible):
                                 for i in range(1, acc_ptr.accChildCount + 1)]
             return
 
-        if first:
-            tree = map(self.semantic_wrap, children_ptr)
-        else:
-            tree['Children'] = map(self.semantic_wrap, children_ptr)
+        tree['Children'] = map(self.semantic_wrap, children_ptr)
 
         for index, child_ptr in enumerate(children_ptr):
-            if first:
-                self.get_acc_children(child_ptr, tree[index],
-                                      child_depth, False)
-            else:
-                self.get_acc_children(child_ptr, tree['Children'][index],
-                                      child_depth, False)
+            self.children(child_ptr, child_depth,
+                          tree['Children'][index])
 
         return tree
-

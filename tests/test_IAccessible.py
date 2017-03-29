@@ -57,6 +57,5 @@ assert RESPONSE[EVENT]['IAccessible']['State'] & STATE_CHECKED == STATE_CHECKED
 
 print "-----------------CMD-----------------------"
 RESPONSE = load(urlopen(CMD_ENPOINT % CMD_PARAMS))['result']
-FUNCTION = 'DefaultAction'
 DEFAULTACTION = 'uncheck'
-assert RESPONSE[FUNCTION] == DEFAULTACTION
+assert RESPONSE == DEFAULTACTION

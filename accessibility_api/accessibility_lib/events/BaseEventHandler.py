@@ -5,7 +5,7 @@ You can obtain one at http://mozilla.org/MPL/2.0/.
 '''
 
 
-class IEventHandler(object):
+class BaseEventHandler(object):
     """
     EventHandler Object Interface Definition
     """
@@ -13,11 +13,6 @@ class IEventHandler(object):
     def __init__(self, params):
         self.params = params
         self.interface_t = params.get('interface')
-        identifiers = {
-            'Name': params.get('name'),
-            'Role': params.get('role')
-        }
-        self.filtered_identifiers = {k: v for k, v in identifiers.items() if v}
 
     def serialize_result(self):
         """
@@ -37,7 +32,7 @@ class IEventHandler(object):
         """
         raise NotImplementedError
 
-    def listen_events(self):
+    def listen_to_events(self):
         """
         Listen for tracked events
         """

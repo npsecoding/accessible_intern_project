@@ -9,9 +9,6 @@ from BaseHTTPServer import BaseHTTPRequestHandler
 from urlparse import urlparse, parse_qs, parse_qsl
 from json import dumps
 from comtypes import CoInitialize
-from accessibility_api.accessibility_lib.scripts.constants import (
-    SUCCESS, ERROR
-)
 from accessibility_api.accessibility_lib.scripts.accessible import accessible
 from accessibility_api.accessibility_lib.scripts.event import event
 from accessibility_api.accessibility_lib.scripts.commands import command
@@ -27,18 +24,22 @@ class AccessibilityRequestHandler(BaseHTTPRequestHandler):
         Send JSON to client
         """
 
-        status = value.get('error')
-        if status == ERROR:
+        is_error = value.get('error')
+        if is_error:
             self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(dumps({
+                'error': is_error,
+                'message': value.get('message')
+            }))
         else:
             self.send_response(200)
-
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-        self.wfile.write(dumps({
-            'result': value.get('result'),
-            'error': status
-        }))
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(dumps({
+                'result': value.get('result')
+            }))
 
     def do_GET(self):
         """

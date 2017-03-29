@@ -11,15 +11,10 @@ class BaseAccessible(object):
     """
 
     def __init__(self, params):
-        identifiers = {
-            'Name': params.get('name'),
-            'Role': params.get('role')
-        }
-        self.filtered_identifiers = {k: v for k, v in identifiers.items() if v}
+        self.params = params
 
-    def serialize_result(self, depth=-1):
+    def serialize_result(self, depth):
         """
         Accessible Object to JSON
         """
         raise NotImplementedError
-

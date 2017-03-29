@@ -6,12 +6,9 @@ You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from comtypes import IServiceProvider
 from comtypes.gen.Accessibility import IAccessible
-from comtypes.gen.IAccessible2Lib import IAccessible2
-
-SUCCESS = False
-ERROR = True
 
 TIMEOUT = 10
+INVALID_EVENT = -1
 
 CHILDID_SELF = 0x0
 S_OK = 0x0
@@ -26,9 +23,6 @@ IID_IServiceProvider = IServiceProvider._iid_
 
 IAccessible_t = IAccessible
 IID_IAccessible = IAccessible._iid_
-
-IAccessible2_t = IAccessible2
-IID_IAccessible2 = IAccessible2._iid_
 
 OBJID_WINDOW = 0x00000000
 OBJID_SELF = 0x00000000
@@ -188,4 +182,4 @@ EVENT_CONSOLE_END_APPLICATION = 0x4007
 WIN_EVENT_NAMES = {}
 for _sym, _val in locals().items():
     if _sym.startswith('EVENT_'):
-        WIN_EVENT_NAMES[_val] = _sym
+        WIN_EVENT_NAMES[_sym] = _val

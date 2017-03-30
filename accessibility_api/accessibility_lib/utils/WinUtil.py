@@ -7,8 +7,14 @@ You can obtain one at http://mozilla.org/MPL/2.0/.
 from ctypes import windll, oledll, byref, POINTER
 from ctypes.wintypes import c_char_p, c_long
 from comtypes.automation import VARIANT
-from accessibility_api.accessibility_lib.scripts.constants import *
-from accessibility_api.accessibility_lib.scripts.debug import *
+from accessibility_api.accessibility_lib.scripts.constants import (
+    CHILDID_SELF, S_OK, OBJID_WINDOW,
+    IAccessible_t, IID_IAccessible,
+    VT_DISPATCH, VT_I4
+)
+from accessibility_api.accessibility_lib.scripts.debug import (
+    print_accessible, print_simple, print_test_window
+)
 
 
 class WinUtil(object):
@@ -16,7 +22,7 @@ class WinUtil(object):
     Utility definition for Windows Platform
     """
 
-    simple_elements = None
+    simple_elements = dict()
     target = None
 
     @staticmethod
@@ -30,13 +36,13 @@ class WinUtil(object):
             hwnd, OBJID_WINDOW, byref(IID_IAccessible), byref(acc_ptr))
 
         if res == S_OK:
-            acc_ptr.children = WinUtil._accessible_children(acc_ptr)
+            acc_ptr.children = WinUtil.accessible_children(acc_ptr)
             return acc_ptr
         else:
             raise ValueError('Failed to get accessible from window')
 
     @staticmethod
-    def _accessible_children(accptr):
+    def accessible_children(accptr):
         """
         Get the children of an accessible object
         """
@@ -87,17 +93,15 @@ class WinUtil(object):
             WinUtil.target.isSimpleElement = False
             return
 
-        if DEBUG_ENABLED:
-            print_accessible(node)
+        print_accessible(node)
 
         # Retrieve simple children or accessible children from node
-        acc_children = WinUtil._accessible_children(node)
+        acc_children = WinUtil.accessible_children(node)
 
         # Traverse through simple elements of node
         if node in WinUtil.simple_elements:
             for childid in WinUtil.simple_elements[node]:
-                if DEBUG_ENABLED:
-                    print_simple(node, childid)
+                print_simple(node, childid)
 
                 if WinUtil.match_criteria(node, search_criteria, childid):
                     WinUtil.target = node
@@ -178,7 +182,7 @@ class WinUtil(object):
         """
 
         test_window = WinUtil._get_test_window()
-        print 'Test Window: %d' % test_window
+        print_test_window(test_window)
         root = WinUtil._accessible_object_from_window(test_window)
         return root
 
@@ -188,10 +192,7 @@ class WinUtil(object):
         Retrieve the accessible object for the given ID
         """
 
-        WinUtil.target = None
-        WinUtil.simple_elements = dict()
         visited = set()
-
         root = WinUtil.get_root_accessible()
         visited.add(root)
         WinUtil._traverse(root, visited, params)

@@ -16,7 +16,9 @@ from accessibility_api.accessibility_lib.scripts.constants import (
     IAccessible_t, S_OK, INVALID_EVENT,
     TIMEOUT, WIN_EVENT_NAMES, WINEVENT_OUTOFCONTEXT
 )
-from accessibility_api.accessibility_lib.scripts.debug import DEBUG_ENABLED
+from accessibility_api.accessibility_lib.scripts.debug import (
+    print_event, print_name
+)
 
 
 class WinEventHandler(BaseEventHandler):
@@ -43,8 +45,7 @@ class WinEventHandler(BaseEventHandler):
         if S_OK != result:
             return
 
-        if DEBUG_ENABLED:
-            print acc_ptr.accName(idChild)
+        print_name(acc_ptr, idChild)
 
         if WinUtil.match_criteria(acc_ptr, WinEventHandler.params, idChild):
             WinEventHandler.found = {
@@ -92,8 +93,7 @@ class WinEventHandler(BaseEventHandler):
         WinEventHandler.found = None
 
         self.hook = self.register_event_hook(event_t)
-        if DEBUG_ENABLED:
-            print 'Registered ' + event_t + ' hook'
+        print_event(event_t)
         if self.hook != INVALID_EVENT:
             self.listen_to_events()
 

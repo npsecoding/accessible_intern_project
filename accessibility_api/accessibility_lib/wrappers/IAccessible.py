@@ -10,9 +10,9 @@ from accessibility_api.accessibility_lib.wrappers.BaseAccessible import (
 )
 from accessibility_api.accessibility_lib.utils.WinUtil import WinUtil
 from ..scripts.constants import (
-    CHILDID_SELF, FULL_CHILD_TREE
+    CHILDID_SELF, NO_CHILD_TREE
 )
-from ..scripts.debug import DEBUG_ENABLED
+from ..scripts.debug import simple_element_atrribute
 
 FLAT_PROPERTIES = [
     'accChildCount', 'accDefaultAction',
@@ -33,6 +33,7 @@ class IAccessible(BaseAccessible):
         # Find accessible object associated with ID
         self._target = WinUtil.get_target_accessible(params)
         self.depth = None
+        self.response = None
 
     def serialize_result(self, depth):
         """
@@ -42,18 +43,21 @@ class IAccessible(BaseAccessible):
         self.depth = depth
 
         if self._target is None:
-            return {
+            self.response = {
                 'error': True,
                 'message': 'No accessible found'
             }
         else:
-            return {
-                'result': {'IAccessible': self.serialize()},
+            self.response = {
+                'result': {'IAccessible': self._serialize()},
                 'target': self._target,
                 'semantic_wrap': self.semantic_wrap
             }
 
-    def serialize(self):
+        self.clear_state()
+        return self.response
+
+    def _serialize(self):
         """
         Serialize accessible into json
         """
@@ -61,8 +65,9 @@ class IAccessible(BaseAccessible):
         attributes = FLAT_PROPERTIES[:]
         attributes.extend(TREE_PROPERTIES)
         childid = CHILDID_SELF
+
         # If object is simple element remove irrelevant children fields
-        if self._target.isSimpleElement:
+        if self.is_simple_element(self._target):
             attributes.remove('accChildren')
             childid = self._target.childId
 
@@ -90,12 +95,8 @@ class IAccessible(BaseAccessible):
         json = {}
         prefix = 'acc'
 
-        # Add field to show child is simple element
-        if DEBUG_ENABLED:
-            if child_id != CHILDID_SELF:
-                json['SimpleElement'] = True
-            else:
-                json['SimpleElement'] = False
+        # For debugging add field to show child is simple element
+        simple_element_atrribute(json, child_id)
 
         for attribute in attributes:
             field = attribute[len(prefix):]
@@ -145,7 +146,7 @@ class IAccessible(BaseAccessible):
         if value is None:
             return None
         elif isinstance(value, int):
-            if acc_ptr in WinUtil.simple_elements:
+            if self.is_simple_element(acc_ptr):
                 return self.semantic_wrap(acc_ptr, value)
             else:
                 return self.semantic_wrap(acc_ptr.accChild(value))
@@ -166,9 +167,9 @@ class IAccessible(BaseAccessible):
         """
 
         tree = {}
-        return self.children(self._target, self.depth, tree)
+        return self.get_children_impl(self._target, self.depth, tree)
 
-    def children(self, acc_ptr, child_depth, tree):
+    def get_children_impl(self, acc_ptr, child_depth, tree):
         """
         Get child accessible
         """
@@ -178,23 +179,47 @@ class IAccessible(BaseAccessible):
             return
 
         # Determine depth of children
-        if (child_depth is not FULL_CHILD_TREE) and (child_depth is 0):
+        if child_depth is NO_CHILD_TREE:
             return
+
+        # Decrease child depth on each traversal
         child_depth -= 1
 
         # First is used to determine if a children field should wrap list
-        children_ptr = WinUtil._accessible_children(acc_ptr)
+        children_ptrs = WinUtil.accessible_children(acc_ptr)
 
         # Check if children are simple elements
-        if acc_ptr in WinUtil.simple_elements:
+        if self.is_simple_element(acc_ptr):
             tree['Children'] = [self.semantic_wrap(acc_ptr, i)
                                 for i in range(1, acc_ptr.accChildCount + 1)]
             return
 
-        tree['Children'] = map(self.semantic_wrap, children_ptr)
+        tree['Children'] = map(self.semantic_wrap, children_ptrs)
 
-        for index, child_ptr in enumerate(children_ptr):
-            self.children(child_ptr, child_depth,
-                          tree['Children'][index])
+        for index, child_ptr in enumerate(children_ptrs):
+            self.get_children_impl(child_ptr, child_depth,
+                                   tree['Children'][index])
 
         return tree
+
+    def is_simple_element(self, acc_ptr):
+        """
+        Determine if object is simple element
+        """
+
+        try:
+            if acc_ptr.is_simple_element:
+                return True
+        except AttributeError:
+            if acc_ptr in WinUtil.simple_elements:
+                return True
+            else:
+                return False
+
+    def clear_state(self):
+        """
+        Clear values stored in static util
+        """
+
+        WinUtil.target = None
+        WinUtil.simple_elements = dict()

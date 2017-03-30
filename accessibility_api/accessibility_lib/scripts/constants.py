@@ -17,6 +17,7 @@ VT_I4 = 0x3
 VT_DISPATCH = 0x9
 
 FULL_CHILD_TREE = -1
+NO_CHILD_TREE = 0
 
 IServiceProvider_t = IServiceProvider
 IID_IServiceProvider = IServiceProvider._iid_

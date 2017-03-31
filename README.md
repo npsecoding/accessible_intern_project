@@ -21,13 +21,16 @@ Launch Accessible API service.
 
 **Required:**
 port number
+application
 
 **Optional:**
+
 platform
+
 verbose
 
 ```
-python AccessibilityAPIServer.py [port number] [platform] [verbose]
+python AccessibilityAPIServer.py [port number] [application] [platform] [verbose]
 ```
 
 ## API Reference

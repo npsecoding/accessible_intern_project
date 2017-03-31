@@ -10,7 +10,7 @@ API that wraps around platform accessibility APIs, can be used to retrieve infor
 - ATK (Not Supported)
 
 ## Installation
-Install accssible library dependencies.
+Install accessible library dependencies.
 
 ```
 pip install -r requirements.txt
@@ -19,8 +19,15 @@ pip install -r requirements.txt
 ## Usage
 Launch Accessible API service.
 
+**Required:**
+port number
+
+**Optional:**
+platform
+verbose
+
 ```
-python AccessibilityAPIServer.py [port number] [platform]
+python AccessibilityAPIServer.py [port number] [platform] [verbose]
 ```
 
 ## API Reference
@@ -31,25 +38,25 @@ Retrieve accesible object information.
 - URL:
 
   /accessible
-  
+
 - METHOD:
 
   GET
-  
+
 - URL PARAMS:
 
   **Required:**
-  
+
   interface=[string]
-  
+
   **Optional:**
-  
+
   name=[string]
-  
+
   role=[integer]
-  
+
   depth=[integer]
-  
+
 ### Event
 
 Track event on accessible.
@@ -57,25 +64,25 @@ Track event on accessible.
 - URL:
 
   /event
-  
+
 - METHOD:
 
   GET
-  
+
 - URL PARAMS:
 
   **Required:**
-  
+
   interface=[string]
-  
+
   type=[string]
-  
+
   **Optional:**
-  
+
   name=[string]
-  
+
   role=[integer]
-  
+
 ### Command
 
 Run command on accessible object.
@@ -83,27 +90,27 @@ Run command on accessible object.
 - URL:
 
   /cmd
-  
+
 - METHOD:
 
   GET
-  
+
 - URL PARAMS:
 
   **Required:**
-  
+
   interface=[string]
-  
+
   function=[string]
-  
+
   param=[primitive]
-  
+
   **Optional:**
-  
+
   name=[string]
-  
+
   role=[integer]
- 
+
 ## Platform Tests
 
 ### Summary

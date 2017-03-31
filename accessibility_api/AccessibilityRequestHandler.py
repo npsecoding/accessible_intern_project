@@ -13,6 +13,8 @@ from accessibility_api.accessibility_lib.scripts.accessible import accessible
 from accessibility_api.accessibility_lib.scripts.event import event
 from accessibility_api.accessibility_lib.scripts.commands import command
 
+APPLICATION_WINDOW = None
+
 
 class AccessibilityRequestHandler(BaseHTTPRequestHandler):
     """
@@ -57,6 +59,7 @@ class AccessibilityRequestHandler(BaseHTTPRequestHandler):
         if handler:
             params = dict(parse_qsl(url.query))
             params['param'] = parse_qs(url.query).get('param')
+            params['window'] = APPLICATION_WINDOW
             self.response(handler(params))
         else:
             self.send_response(403, 'Invalid Request')
@@ -77,10 +80,13 @@ class WindowsAccessibilityRequestHandler(AccessibilityRequestHandler, object):
         CoInitialize()
 
 
-def platform_accessibility_request_handler_factory(platform):
+def platform_accessibility_request_handler_factory(platform, app):
     """
     Return platform accessbility handler
     """
+
+    global APPLICATION_WINDOW
+    APPLICATION_WINDOW = app
 
     if platform is None:
         platform = sys.platform

@@ -27,8 +27,7 @@ class WinEventHandler(BaseEventHandler):
     """
 
     # Store information about event used between callback and handler
-    info = {}
-    found = None
+    found = {}
 
     # Callback function
     @staticmethod
@@ -48,11 +47,13 @@ class WinEventHandler(BaseEventHandler):
         print_name(acc_ptr, idChild)
 
         if WinUtil.match_criteria(acc_ptr, WinEventHandler.params, idChild):
-            WinEventHandler.found = {
-                'Child_Id': idChild,
-                WinEventHandler.interface_t:
-                    accessible(WinEventHandler.params).get('result')
-            }
+            event_t = WinEventHandler.params.get('type')
+            WinEventHandler.found[event_t] = \
+                {
+                    'type': event_t,
+                    WinEventHandler.params.get('interface'):
+                        accessible(WinEventHandler.params).get('result')
+                }
 
     # Callback type
     WINPROC_TYPE = WINFUNCTYPE(
@@ -85,15 +86,12 @@ class WinEventHandler(BaseEventHandler):
         )
         return hook_result
 
-    def __init__(self, event_t, params):
+    def __init__(self, params):
         super(WinEventHandler, self).__init__(params)
         WinEventHandler.params = self.params
-        WinEventHandler.interface_t = self.interface_t
-        WinEventHandler.type_t = event_t
-        WinEventHandler.found = None
 
-        self.hook = self.register_event_hook(event_t)
-        print_event(event_t)
+        self.hook = self.register_event_hook(self.type_t)
+        print_event(self.type_t)
         if self.hook != INVALID_EVENT:
             self.listen_to_events()
 
@@ -104,13 +102,13 @@ class WinEventHandler(BaseEventHandler):
         if WinEventHandler.found is None:
             return {
                 'error': True,
-                'message': WinEventHandler.type_t + ' not found'
+                'message': self.type_t + ' not found'
             }
         else:
-            interface_t = WinEventHandler.interface_t
+            acc_obj = self.found[self.type_t][self.interface_t]
+            del WinEventHandler.found[self.type_t]
             return {
-                'result': {WinEventHandler.type_t:
-                           WinEventHandler.found[interface_t]}
+                'result': {self.type_t: acc_obj}
             }
 
     def register_event_hook(self, event):

@@ -31,9 +31,10 @@ class IAccessible(BaseAccessible):
     def __init__(self, params):
         super(IAccessible, self).__init__(params)
         # Find accessible object associated with ID
-        self._target = WinUtil.get_target_accessible(params)
+        self.simple_elements = dict()
+        self._target = WinUtil.get_target_accessible(params,
+                                                     self.simple_elements)
         self.depth = None
-        self.response = None
 
     def serialize_result(self, depth):
         """
@@ -43,19 +44,16 @@ class IAccessible(BaseAccessible):
         self.depth = depth
 
         if self._target is None:
-            self.response = {
+            return {
                 'error': True,
                 'message': 'No accessible found'
             }
         else:
-            self.response = {
+            return {
                 'result': {'IAccessible': self._serialize()},
                 'target': self._target,
                 'semantic_wrap': self.semantic_wrap
             }
-
-        self.clear_state()
-        return self.response
 
     def _serialize(self):
         """
@@ -186,7 +184,8 @@ class IAccessible(BaseAccessible):
         child_depth -= 1
 
         # First is used to determine if a children field should wrap list
-        children_ptrs = WinUtil.accessible_children(acc_ptr)
+        children_ptrs = WinUtil.accessible_children(acc_ptr,
+                                                    self.simple_elements)
 
         # Check if children are simple elements
         if self.is_simple_element(acc_ptr):
@@ -211,15 +210,7 @@ class IAccessible(BaseAccessible):
             if acc_ptr.is_simple_element:
                 return True
         except AttributeError:
-            if acc_ptr in WinUtil.simple_elements:
+            if acc_ptr in self.simple_elements:
                 return True
             else:
                 return False
-
-    def clear_state(self):
-        """
-        Clear values stored in static util
-        """
-
-        WinUtil.target = None
-        WinUtil.simple_elements = dict()

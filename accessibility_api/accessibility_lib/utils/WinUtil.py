@@ -4,6 +4,7 @@ License, v. 2.0. If a copy of the MPL was not distributed with this file,
 You can obtain one at http://mozilla.org/MPL/2.0/.
 '''
 
+from exceptions import WindowsError
 from ctypes import windll, oledll, byref, POINTER
 from ctypes.wintypes import c_char_p, c_long
 from comtypes.automation import VARIANT
@@ -16,43 +17,46 @@ from accessibility_api.accessibility_lib.scripts.debug import (
     print_accessible, print_simple, print_test_window
 )
 
+TARGET = None
+
 
 class WinUtil(object):
     """
     Utility definition for Windows Platform
     """
 
-    simple_elements = dict()
-    target = None
-
     @staticmethod
-    def _accessible_object_from_window(hwnd):
+    def _accessible_object_from_window(hwnd, simple_elements):
         """
         Get the accessible object for window
         """
 
         acc_ptr = POINTER(IAccessible_t)()
-        res = oledll.oleacc.AccessibleObjectFromWindow(
-            hwnd, OBJID_WINDOW, byref(IID_IAccessible), byref(acc_ptr))
+        try:
+            res = oledll.oleacc.AccessibleObjectFromWindow(
+                hwnd, OBJID_WINDOW, byref(IID_IAccessible), byref(acc_ptr))
+        except WindowsError:
+            raise Exception('Specified application not open')
 
         if res == S_OK:
-            acc_ptr.children = WinUtil.accessible_children(acc_ptr)
+            acc_ptr.children = WinUtil.accessible_children(acc_ptr,
+                                                           simple_elements)
             return acc_ptr
         else:
             raise ValueError('Failed to get accessible from window')
 
     @staticmethod
-    def accessible_children(accptr):
+    def accessible_children(acc_ptr, simple_elements):
         """
         Get the children of an accessible object
         """
 
         ichild_start = 0
-        cc_children = accptr.accChildCount
+        cc_children = acc_ptr.accChildCount
         pc_obtained = c_long()
         variant_array_type = VARIANT * cc_children
         rgvar_children = variant_array_type()
-        res = oledll.oleacc.AccessibleChildren(accptr, ichild_start,
+        res = oledll.oleacc.AccessibleChildren(acc_ptr, ichild_start,
                                                cc_children,
                                                byref(rgvar_children),
                                                byref(pc_obtained))
@@ -66,54 +70,60 @@ class WinUtil(object):
                     acc_objs.append(acc)
                 # Child is Simple Element
                 elif child.vt == VT_I4:
-                    WinUtil._wrap_simple_element(accptr, child.value)
+                    WinUtil._wrap_simple_element(acc_ptr, child.value,
+                                                 simple_elements)
+                else:
+                    acc_objs.append(None)
             return acc_objs
         else:
             raise ValueError('Failed to get accessible children')
 
     @staticmethod
-    def _wrap_simple_element(accptr, childid):
+    def _wrap_simple_element(acc_ptr, childid, simple_elements):
         """
         Associate simple element and parent accessible object
         """
 
-        if accptr not in WinUtil.simple_elements:
-            WinUtil.simple_elements[accptr] = [childid]
+        if acc_ptr not in simple_elements:
+            simple_elements[acc_ptr] = [childid]
         else:
-            WinUtil.simple_elements[accptr].append(childid)
+            simple_elements[acc_ptr].append(childid)
 
     @staticmethod
-    def _traverse(node, visited, search_criteria):
+    def _traverse(node, visited, search_criteria, simple_elements):
         """
         Traverse through accessible tree looking for node with the given ID
         """
 
+        global TARGET
+
         if WinUtil.match_criteria(node, search_criteria):
-            WinUtil.target = node
-            WinUtil.target.isSimpleElement = False
+            TARGET = node
+            TARGET.isSimpleElement = False
             return
 
         print_accessible(node)
 
         # Retrieve simple children or accessible children from node
-        acc_children = WinUtil.accessible_children(node)
+        acc_children = WinUtil.accessible_children(node, simple_elements)
 
         # Traverse through simple elements of node
-        if node in WinUtil.simple_elements:
-            for childid in WinUtil.simple_elements[node]:
+        if node in simple_elements:
+            for childid in simple_elements[node]:
                 print_simple(node, childid)
 
                 if WinUtil.match_criteria(node, search_criteria, childid):
-                    WinUtil.target = node
-                    WinUtil.target.isSimpleElement = True
-                    WinUtil.target.childId = childid
+                    TARGET = node
+                    TARGET.isSimpleElement = True
+                    TARGET.childId = childid
                     return
 
         # Traverse through accessible objects of node
         for child in acc_children:
             if child not in visited:
                 visited.add(node)
-                WinUtil._traverse(child, visited, search_criteria)
+                WinUtil._traverse(child, visited, search_criteria,
+                                  simple_elements)
 
     @staticmethod
     def get_indentifiers(params):
@@ -151,7 +161,7 @@ class WinUtil(object):
         return True
 
     @staticmethod
-    def _get_test_window():
+    def _get_test_window(app_window, simple_elements):
         """
         Get test window handle
         """
@@ -160,41 +170,48 @@ class WinUtil(object):
         test_class = c_char_p('MozillaWindowClass')
         current_hwnd = windll.user32.FindWindowA(test_class, None)
         name = (
-            WinUtil._accessible_object_from_window(current_hwnd)
+            WinUtil._accessible_object_from_window(current_hwnd,
+                                                   simple_elements)
             .accName(CHILDID_SELF)
         )
+
         # Iterate through windows
-        while name is None or 'Marionette Accessible' not in name:
+        while name is None or app_window not in name:
             current_hwnd = (
                 windll.user32
                 .FindWindowExA(None, current_hwnd, test_class, None)
             )
             name = (
-                WinUtil._accessible_object_from_window(current_hwnd)
+                WinUtil._accessible_object_from_window(current_hwnd,
+                                                       simple_elements)
                 .accName(CHILDID_SELF)
             )
         return current_hwnd
 
     @staticmethod
-    def get_root_accessible():
+    def get_root_accessible(app_window, simple_elements):
         """
         Set root accessible object to test window
         """
 
-        test_window = WinUtil._get_test_window()
+        test_window = WinUtil._get_test_window(app_window, simple_elements)
         print_test_window(test_window)
-        root = WinUtil._accessible_object_from_window(test_window)
+        root = WinUtil._accessible_object_from_window(test_window,
+                                                      simple_elements)
         return root
 
     @staticmethod
-    def get_target_accessible(params):
+    def get_target_accessible(params, simple_elements):
         """
         Retrieve the accessible object for the given ID
         """
 
+        global TARGET
+        TARGET = None
         visited = set()
-        root = WinUtil.get_root_accessible()
+        root = WinUtil.get_root_accessible(params.get('window'),
+                                           simple_elements)
         visited.add(root)
-        WinUtil._traverse(root, visited, params)
+        WinUtil._traverse(root, visited, params, simple_elements)
 
-        return WinUtil.target
+        return TARGET

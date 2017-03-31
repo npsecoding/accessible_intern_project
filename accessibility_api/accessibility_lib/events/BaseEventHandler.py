@@ -13,6 +13,7 @@ class BaseEventHandler(object):
     def __init__(self, params):
         self.params = params
         self.interface_t = params.get('interface')
+        self.type_t = params.get('type')
 
     def serialize_result(self):
         """

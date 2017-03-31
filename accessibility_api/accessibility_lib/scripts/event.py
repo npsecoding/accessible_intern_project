@@ -26,4 +26,4 @@ def event(params):
         'Windows': WinEventHandler
     }
 
-    return protocol[system()](event_t, params).serialize_result()
+    return protocol[system()](params).serialize_result()

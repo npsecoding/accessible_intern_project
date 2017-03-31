@@ -17,8 +17,6 @@ from accessibility_api.accessibility_lib.scripts.debug import (
     print_accessible, print_simple, print_test_window
 )
 
-TARGET = None
-
 
 class WinUtil(object):
     """
@@ -90,40 +88,38 @@ class WinUtil(object):
             simple_elements[acc_ptr].append(childid)
 
     @staticmethod
-    def _traverse(node, visited, search_criteria, simple_elements):
+    def _traverse(node, visited, search_criteria, state):
         """
         Traverse through accessible tree looking for node with the given ID
         """
 
-        global TARGET
-
         if WinUtil.match_criteria(node, search_criteria):
-            TARGET = node
-            TARGET.isSimpleElement = False
+            state['target'] = node
+            state['target'].isSimpleElement = False
             return
 
         print_accessible(node)
 
         # Retrieve simple children or accessible children from node
-        acc_children = WinUtil.accessible_children(node, simple_elements)
+        acc_children = \
+            WinUtil.accessible_children(node, state.get('simple_elements'))
 
         # Traverse through simple elements of node
-        if node in simple_elements:
-            for childid in simple_elements[node]:
+        if node in state.get('simple_elements'):
+            for childid in state.get('simple_elements')[node]:
                 print_simple(node, childid)
 
                 if WinUtil.match_criteria(node, search_criteria, childid):
-                    TARGET = node
-                    TARGET.isSimpleElement = True
-                    TARGET.childId = childid
+                    state['target'] = node
+                    state['target'].isSimpleElement = True
+                    state['target'].childId = childid
                     return
 
         # Traverse through accessible objects of node
         for child in acc_children:
             if child not in visited:
                 visited.add(node)
-                WinUtil._traverse(child, visited, search_criteria,
-                                  simple_elements)
+                WinUtil._traverse(child, visited, search_criteria, state)
 
     @staticmethod
     def get_indentifiers(params):
@@ -161,7 +157,7 @@ class WinUtil(object):
         return True
 
     @staticmethod
-    def _get_test_window(app_window, simple_elements):
+    def _get_test_window(test_window_name, simple_elements):
         """
         Get test window handle
         """
@@ -176,7 +172,7 @@ class WinUtil(object):
         )
 
         # Iterate through windows
-        while name is None or app_window not in name:
+        while name is None or test_window_name not in name:
             current_hwnd = (
                 windll.user32
                 .FindWindowExA(None, current_hwnd, test_class, None)
@@ -201,17 +197,14 @@ class WinUtil(object):
         return root
 
     @staticmethod
-    def get_target_accessible(params, simple_elements):
+    def get_target_accessible(params, state):
         """
         Retrieve the accessible object for the given ID
         """
 
-        global TARGET
-        TARGET = None
-        visited = set()
         root = WinUtil.get_root_accessible(params.get('window'),
-                                           simple_elements)
-        visited.add(root)
-        WinUtil._traverse(root, visited, params, simple_elements)
+                                           state.get('simple_elements'))
+        state.get('visited').add(root)
+        WinUtil._traverse(root, state.get('visited'),
+                          params, state)
 
-        return TARGET

@@ -31,17 +31,22 @@ class IAccessible(BaseAccessible):
     def __init__(self, params):
         super(IAccessible, self).__init__(params)
         # Find accessible object associated with ID
-        self.simple_elements = dict()
-        self._target = WinUtil.get_target_accessible(params,
-                                                     self.simple_elements)
-        self.depth = None
+        self.state = {
+            'target': None,
+            'visited': set(),
+            'simple_elements': dict()
+        }
+        WinUtil.get_target_accessible(params, self.state)
+        self._target = self.state.get('target')
+        self._simple_elements = self.state.get('simple_elements')
+        self._depth = None
 
     def serialize_result(self, depth):
         """
         Return accessible object
         """
 
-        self.depth = depth
+        self._depth = depth
 
         if self._target is None:
             return {
@@ -165,7 +170,7 @@ class IAccessible(BaseAccessible):
         """
 
         tree = {}
-        return self.get_children_impl(self._target, self.depth, tree)
+        return self.get_children_impl(self._target, self._depth, tree)
 
     def get_children_impl(self, acc_ptr, child_depth, tree):
         """
@@ -184,8 +189,8 @@ class IAccessible(BaseAccessible):
         child_depth -= 1
 
         # First is used to determine if a children field should wrap list
-        children_ptrs = WinUtil.accessible_children(acc_ptr,
-                                                    self.simple_elements)
+        children_ptrs = \
+            WinUtil.accessible_children(acc_ptr, self._simple_elements)
 
         # Check if children are simple elements
         if self.is_simple_element(acc_ptr):
@@ -210,7 +215,7 @@ class IAccessible(BaseAccessible):
             if acc_ptr.is_simple_element:
                 return True
         except AttributeError:
-            if acc_ptr in self.simple_elements:
+            if acc_ptr in self._simple_elements:
                 return True
             else:
                 return False
